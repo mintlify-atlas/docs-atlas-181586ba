@@ -1,0 +1,208 @@
+{
+  "projectType": "saas",
+  "projectName": "Formbricks",
+  "projectDescription": "Open-source experience management platform for creating and managing surveys across web, mobile, and email channels",
+  "theme": "mint",
+  "primaryColor": "#00C4B8",
+  "lightColor": "#00C4B8",
+  "darkColor": "#00C4B8",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Overview",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "what-is-formbricks",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/surveys",
+              "concepts/environments",
+              "concepts/contacts",
+              "concepts/responses"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Surveys",
+        "groups": [
+          {
+            "group": "Survey Types",
+            "pages": [
+              "surveys/link-surveys",
+              "surveys/website-surveys",
+              "surveys/app-surveys",
+              "surveys/email-surveys"
+            ]
+          },
+          {
+            "group": "Question Types",
+            "pages": [
+              "surveys/questions/open-text",
+              "surveys/questions/single-select",
+              "surveys/questions/multi-select",
+              "surveys/questions/rating",
+              "surveys/questions/nps",
+              "surveys/questions/file-upload",
+              "surveys/questions/date",
+              "surveys/questions/matrix"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "surveys/features/conditional-logic",
+              "surveys/features/multi-language",
+              "surveys/features/custom-styling",
+              "surveys/features/hidden-fields",
+              "surveys/features/webhooks"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Integration",
+        "groups": [
+          {
+            "group": "SDK Setup",
+            "pages": [
+              "integration/javascript",
+              "integration/react",
+              "integration/nextjs",
+              "integration/vue",
+              "integration/flutter"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/overview",
+              "integrations/slack",
+              "integrations/zapier",
+              "integrations/notion",
+              "integrations/google-sheets"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Self-Hosting",
+        "groups": [
+          {
+            "group": "Deployment",
+            "pages": [
+              "self-hosting/overview",
+              "self-hosting/docker",
+              "self-hosting/kubernetes",
+              "self-hosting/railway"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "self-hosting/configuration/environment-variables",
+              "self-hosting/configuration/email",
+              "self-hosting/configuration/storage",
+              "self-hosting/configuration/authentication"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "self-hosting/advanced/enterprise-features",
+              "self-hosting/advanced/ssl-certificates",
+              "self-hosting/advanced/scaling",
+              "self-hosting/advanced/monitoring"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "api/overview",
+              "api/authentication",
+              "api/rate-limits"
+            ]
+          },
+          {
+            "group": "Management API",
+            "pages": [
+              "api/surveys",
+              "api/responses",
+              "api/contacts",
+              "api/webhooks"
+            ]
+          },
+          {
+            "group": "Client API",
+            "pages": [
+              "api/client/display",
+              "api/client/response",
+              "api/client/people"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/overview",
+              "development/local-setup",
+              "development/architecture",
+              "development/contributing"
+            ]
+          },
+          {
+            "group": "Standards",
+            "pages": [
+              "development/standards/code-style",
+              "development/standards/testing",
+              "development/standards/documentation"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Multi-channel surveys (web, mobile, link, email)",
+    "No-code survey builder with multiple question types",
+    "Advanced targeting and conditional logic",
+    "Real-time response analytics and insights",
+    "Webhook integrations with Slack, Notion, Zapier",
+    "Self-hosted option with full data control",
+    "Multi-language survey support",
+    "Contact and attribute management",
+    "RESTful API for programmatic access",
+    "Enterprise features with SSO and white-labeling"
+  ],
+  "publicApiSurface": [
+    "GET /api/v1/management/surveys",
+    "POST /api/v1/management/surveys",
+    "GET /api/v1/management/responses",
+    "POST /api/v1/management/responses",
+    "GET /api/v1/management/contacts",
+    "POST /api/v1/management/contacts",
+    "GET /api/v1/management/webhooks",
+    "POST /api/v1/management/webhooks",
+    "GET /api/v1/client/[environmentId]/display",
+    "POST /api/v1/client/[environmentId]/response",
+    "@formbricks/js - JavaScript SDK",
+    "@formbricks/surveys - Survey rendering library",
+    "@formbricks/types - TypeScript type definitions"
+  ]
+}
