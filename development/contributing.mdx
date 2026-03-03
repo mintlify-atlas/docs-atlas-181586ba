@@ -1,0 +1,357 @@
+---
+title: Contribution Guidelines
+description: Guidelines for contributing to Formbricks
+icon: book
+---
+
+Thank you for your interest in contributing to Formbricks! This guide will help you understand our development process and standards.
+
+## Current Contribution Policy
+
+<Warning>
+For the time being, we don't have the capacity to properly facilitate community code contributions. We've decided to only facilitate community code contributions in rare exceptions in the coming months.
+</Warning>
+
+This is due to:
+- Limited engineering attention for reviewing contributions
+- Need to focus on prioritized features and bug fixes
+- Ensuring consistency with our product roadmap
+
+### What You Can Do
+
+1. **Report Issues**: Always welcome! [Create an issue](https://github.com/formbricks/formbricks/issues/new/choose)
+2. **Feature Requests**: Propose enhancements with the "Enhancement" tag
+3. **Upvote Issues**: Use 👍 reactions to help us prioritize
+4. **Documentation**: Improvements to docs are appreciated
+5. **Community Support**: Help others in discussions
+
+### Exception Process
+
+If you want to contribute code:
+
+1. **Create an enhancement issue first**
+2. **Explain why it's important**
+3. **Wait for team feedback** before starting work
+4. **We'll let you know** if we can accept the contribution
+
+## Development Workflow
+
+If your contribution is accepted, follow this workflow:
+
+<Steps>
+  <Step title="Fork and Clone">
+    Fork the repository and clone your fork:
+    
+    ```bash
+    git clone https://github.com/YOUR_USERNAME/formbricks.git
+    cd formbricks
+    git remote add upstream https://github.com/formbricks/formbricks.git
+    ```
+  </Step>
+
+  <Step title="Create a Branch">
+    Create a feature branch from `main`:
+    
+    ```bash
+    git checkout -b fix/issue-number-description
+    # or
+    git checkout -b feat/feature-name
+    ```
+    
+    Branch naming conventions:
+    - `fix/` - Bug fixes
+    - `feat/` - New features
+    - `chore/` - Maintenance tasks
+    - `docs/` - Documentation updates
+  </Step>
+
+  <Step title="Set Up Development Environment">
+    Follow the [local setup guide](/development/local-setup):
+    
+    ```bash
+    pnpm install
+    pnpm db:up
+    pnpm db:migrate:dev
+    pnpm dev
+    ```
+  </Step>
+
+  <Step title="Make Your Changes">
+    - Follow our [code style guidelines](/development/standards/code-style)
+    - Write [tests](/development/standards/testing) for new functionality
+    - Update documentation if needed
+    - Keep commits focused and atomic
+  </Step>
+
+  <Step title="Test Your Changes">
+    Run the full test suite:
+    
+    ```bash
+    pnpm lint
+    pnpm test
+    pnpm test:e2e  # If applicable
+    ```
+    
+    Ensure all tests pass before submitting.
+  </Step>
+
+  <Step title="Commit Your Changes">
+    Follow Conventional Commits format:
+    
+    ```bash
+    git add .
+    git commit -m "fix: update OpenAPI schema (#1234)"
+    ```
+    
+    Commit message format:
+    - `fix:` - Bug fixes
+    - `feat:` - New features
+    - `chore:` - Maintenance
+    - `docs:` - Documentation
+    - Include PR/issue number in parentheses
+  </Step>
+
+  <Step title="Push and Create PR">
+    Push your branch and create a pull request:
+    
+    ```bash
+    git push origin your-branch-name
+    ```
+    
+    Then create a PR on GitHub with:
+    - Clear title and description
+    - Link to related issue
+    - Screenshots for UI changes
+    - Test results
+  </Step>
+</Steps>
+
+## Pull Request Guidelines
+
+### PR Title
+
+Follow the Conventional Commits format:
+
+```
+fix: fix survey display issue on mobile
+feat: add CSV export for responses
+chore: update dependencies
+docs: improve setup instructions
+```
+
+### PR Description
+
+Include the following sections:
+
+```markdown
+## Problem
+Describe the issue this PR solves
+
+## Solution
+Explain your approach and implementation
+
+## Changes
+- List key changes made
+- Include any breaking changes
+
+## Testing
+- How did you test this?
+- Include test output
+
+## Screenshots (if applicable)
+Attach before/after screenshots for UI changes
+
+## Related Issues
+Fixes #123
+Related to #456
+```
+
+### Review Process
+
+1. **Automated Checks**: CI must pass (lint, tests, build)
+2. **Code Review**: Team member will review your code
+3. **Feedback**: Address any requested changes
+4. **Approval**: PR will be approved if it meets standards
+5. **Merge**: Team will merge when ready
+
+## Commit Guidelines
+
+### Conventional Commits
+
+We follow a lightweight version of Conventional Commits:
+
+- `fix:` - Bug fixes
+- `feat:` - New features
+- `chore:` - Maintenance tasks (deps, config, etc.)
+- `docs:` - Documentation only
+- `refactor:` - Code refactoring
+- `test:` - Adding or updating tests
+- `perf:` - Performance improvements
+
+### Commit Best Practices
+
+- **Keep commits focused**: One logical change per commit
+- **Write clear messages**: Explain what and why, not how
+- **Reference issues**: Include issue numbers
+- **Ensure tests pass**: Before committing
+
+### Example Commits
+
+```bash
+fix: resolve survey validation error (#1234)
+feat: add bulk delete for responses (#1235)
+chore: update Prisma to 6.14.0 (#1236)
+docs: improve API documentation (#1237)
+refactor: simplify survey service logic (#1238)
+```
+
+## Code Standards
+
+Before submitting code, ensure it meets our standards:
+
+### TypeScript
+
+- Use TypeScript for all code
+- Prefer type inference when possible
+- Avoid `any` type
+- Use shared types from `@formbricks/types`
+
+### React
+
+- Use Server Components by default
+- Add `"use client"` only when necessary
+- Follow React hooks rules
+- Use proper error boundaries
+
+### Styling
+
+- Use TailwindCSS utility classes
+- Follow existing component patterns
+- Ensure responsive design
+- Test in multiple browsers
+
+### Testing
+
+- Write unit tests for `.ts` files
+- Use Vitest and Testing Library
+- E2E tests for critical user flows
+- Maintain or improve code coverage
+
+### Documentation
+
+- Update docs for new features
+- Include JSDoc comments for complex functions
+- Add inline comments for non-obvious code
+- Update README if needed
+
+See [Code Style Guide](/development/standards/code-style) for detailed standards.
+
+## Database Changes
+
+### Migrations
+
+If your change requires database schema updates:
+
+1. **Create Migration**:
+   ```bash
+   pnpm --filter @formbricks/database create-migration
+   ```
+
+2. **Test Migration**:
+   ```bash
+   pnpm db:migrate:dev
+   ```
+
+3. **Include in PR**: Commit the migration file
+
+4. **Document Breaking Changes**: Note in PR description
+
+### Multi-Tenancy
+
+Ensure all new tables/queries:
+- Are scoped by Organization or Environment
+- Include proper indexes
+- Follow soft deletion pattern (if applicable)
+
+## Security Considerations
+
+### Security Issues
+
+**Do not** report security vulnerabilities in public issues!
+
+Instead:
+- Email security@formbricks.com
+- Provide detailed information
+- Wait for response before disclosure
+
+See [SECURITY.md](https://github.com/formbricks/formbricks/blob/main/SECURITY.md) for details.
+
+### Security Best Practices
+
+- **Never commit secrets**: API keys, passwords, tokens
+- **Validate input**: Use Zod schemas
+- **Sanitize output**: Prevent XSS attacks
+- **Check authorization**: Verify user permissions
+- **Use prepared statements**: Prevent SQL injection (Prisma does this)
+
+## Documentation Standards
+
+When updating documentation:
+
+- Use MDX format
+- Include frontmatter (title, description, icon)
+- Use Mintlify components (Accordion, Card, etc.)
+- Add code examples
+- Test all commands/code snippets
+- Update navigation if adding new pages
+
+See [Documentation Standards](/development/standards/documentation) for details.
+
+## Getting Help
+
+If you need assistance:
+
+- **Questions**: Use [GitHub Discussions](https://github.com/formbricks/formbricks/discussions)
+- **Bugs**: Create an [issue](https://github.com/formbricks/formbricks/issues)
+- **Security**: Email security@formbricks.com
+- **General**: Comment on related issues
+
+## Code of Conduct
+
+We expect all contributors to:
+
+- Be respectful and inclusive
+- Provide constructive feedback
+- Focus on what's best for the community
+- Show empathy towards others
+
+## Recognition
+
+All contributors are recognized:
+
+- Listed in GitHub contributors
+- Mentioned in release notes (for significant contributions)
+- Featured on our website (for major features)
+
+## License
+
+By contributing, you agree that your contributions will be licensed under the AGPLv3 License (or Enterprise License for EE features).
+
+See [LICENSE](https://github.com/formbricks/formbricks/blob/main/LICENSE) for details.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Local Setup" icon="laptop-code" href="/development/local-setup">
+    Set up your development environment
+  </Card>
+  <Card title="Code Style" icon="code" href="/development/standards/code-style">
+    Learn our coding standards
+  </Card>
+  <Card title="Testing Standards" icon="flask" href="/development/standards/testing">
+    Write tests for your code
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/development/architecture">
+    Understand the system architecture
+  </Card>
+</CardGroup>

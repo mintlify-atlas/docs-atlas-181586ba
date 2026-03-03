@@ -1,0 +1,350 @@
+---
+title: Surveys
+description: Manage surveys via API
+icon: "list-check"
+---
+
+The Surveys API allows you to create, retrieve, update, and delete surveys programmatically.
+
+## The Survey Object
+
+Surveys contain questions/blocks, endings, and configuration for display and targeting.
+
+### Attributes
+
+<ResponseField name="id" type="string">
+  Unique identifier for the survey
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of when the survey was created
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of when the survey was last updated
+</ResponseField>
+
+<ResponseField name="environmentId" type="string">
+  The environment this survey belongs to
+</ResponseField>
+
+<ResponseField name="blocks" type="array">
+  Array of survey blocks containing questions and elements
+</ResponseField>
+
+<ResponseField name="questions" type="array">
+  Legacy: Array of questions (for backwards compatibility)
+</ResponseField>
+
+<ResponseField name="endings" type="array">
+  Survey endings/thank you screens
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Survey status: `draft`, `scheduled`, `inProgress`, `paused`, or `completed`
+</ResponseField>
+
+## List All Surveys
+
+<CodeGroup>
+```bash cURL
+curl https://app.formbricks.com/api/v1/management/surveys \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/management/surveys',
+  {
+    headers: {
+      'x-api-key': 'YOUR_API_KEY'
+    }
+  }
+);
+
+const surveys = await response.json();
+```
+</CodeGroup>
+
+### Query Parameters
+
+<ParamField query="limit" type="number">
+  Maximum number of surveys to return
+</ParamField>
+
+<ParamField query="offset" type="number">
+  Number of surveys to skip (for pagination)
+</ParamField>
+
+### Response
+
+```json
+[
+  {
+    "id": "srv_...",
+    "createdAt": "2021-01-01T00:00:00.000Z",
+    "updatedAt": "2021-01-01T00:00:00.000Z",
+    "environmentId": "env_...",
+    "status": "inProgress",
+    "blocks": [...],
+    "endings": [...]
+  }
+]
+```
+
+## Retrieve a Survey
+
+Get a specific survey by ID.
+
+<CodeGroup>
+```bash cURL
+curl https://app.formbricks.com/api/v1/management/surveys/{surveyId} \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/management/surveys/srv_123',
+  {
+    headers: {
+      'x-api-key': 'YOUR_API_KEY'
+    }
+  }
+);
+
+const survey = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="surveyId" type="string" required>
+  The ID of the survey to retrieve
+</ParamField>
+
+### Response
+
+```json
+{
+  "id": "srv_...",
+  "createdAt": "2021-01-01T00:00:00.000Z",
+  "updatedAt": "2021-01-01T00:00:00.000Z",
+  "environmentId": "env_...",
+  "status": "inProgress",
+  "blocks": [
+    {
+      "id": "blk_...",
+      "type": "question",
+      "elements": [
+        {
+          "id": "qst_...",
+          "type": "text",
+          "headline": "What is your feedback?"
+        }
+      ]
+    }
+  ],
+  "endings": [
+    {
+      "id": "end_...",
+      "type": "endScreen",
+      "headline": "Thank you!"
+    }
+  ]
+}
+```
+
+## Create a Survey
+
+Create a new survey in your environment.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://app.formbricks.com/api/v1/management/surveys \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "environmentId": "env_...",
+    "blocks": [
+      {
+        "type": "question",
+        "elements": [
+          {
+            "type": "text",
+            "headline": "What is your feedback?",
+            "required": true
+          }
+        ]
+      }
+    ],
+    "endings": [
+      {
+        "type": "endScreen",
+        "headline": "Thank you!"
+      }
+    ],
+    "finished": false,
+    "data": {}
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/management/surveys',
+  {
+    method: 'POST',
+    headers: {
+      'x-api-key': 'YOUR_API_KEY',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      environmentId: 'env_...',
+      blocks: [
+        {
+          type: 'question',
+          elements: [
+            {
+              type: 'text',
+              headline: 'What is your feedback?',
+              required: true
+            }
+          ]
+        }
+      ],
+      endings: [
+        {
+          type: 'endScreen',
+          headline: 'Thank you!'
+        }
+      ]
+    })
+  }
+);
+
+const survey = await response.json();
+```
+</CodeGroup>
+
+### Body Parameters
+
+<ParamField body="environmentId" type="string" required>
+  The environment ID where the survey will be created
+</ParamField>
+
+<ParamField body="blocks" type="array" required>
+  Array of survey blocks containing questions and elements
+</ParamField>
+
+<ParamField body="endings" type="array">
+  Array of survey endings/thank you screens
+</ParamField>
+
+<ParamField body="status" type="string">
+  Survey status: `draft`, `scheduled`, `inProgress`, `paused`, or `completed`
+</ParamField>
+
+### Response
+
+Returns the created survey object with a `201 Created` status.
+
+## Update a Survey
+
+Update an existing survey.
+
+<CodeGroup>
+```bash cURL
+curl -X PUT https://app.formbricks.com/api/v1/management/surveys/{surveyId} \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status": "paused"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/management/surveys/srv_123',
+  {
+    method: 'PUT',
+    headers: {
+      'x-api-key': 'YOUR_API_KEY',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      status: 'paused'
+    })
+  }
+);
+
+const updatedSurvey = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="surveyId" type="string" required>
+  The ID of the survey to update
+</ParamField>
+
+### Body Parameters
+
+Any survey fields you want to update. Only include fields that should be changed.
+
+### Response
+
+Returns the updated survey object.
+
+## Delete a Survey
+
+Delete a survey permanently.
+
+<Warning>
+  This action cannot be undone. All responses associated with this survey will remain but the survey configuration will be deleted.
+</Warning>
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE https://app.formbricks.com/api/v1/management/surveys/{surveyId} \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/management/surveys/srv_123',
+  {
+    method: 'DELETE',
+    headers: {
+      'x-api-key': 'YOUR_API_KEY'
+    }
+  }
+);
+
+const deletedSurvey = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="surveyId" type="string" required>
+  The ID of the survey to delete
+</ParamField>
+
+### Response
+
+Returns the deleted survey object.
+
+## Legacy: Questions Format
+
+For backwards compatibility, the API supports the legacy `questions` format. When a survey has blocks where each block contains exactly one element, the API automatically transforms it to the questions format in responses.
+
+When creating or updating surveys with the `questions` field, they are automatically converted to the modern `blocks` format.
+
+## Feature Permissions
+
+Some survey features require specific organization plans:
+
+- Advanced targeting rules
+- Custom survey logic
+- Enterprise integrations
+
+If you attempt to use a feature not available on your plan, you'll receive a `403 Forbidden` response.

@@ -1,0 +1,372 @@
+---
+title: Storage Configuration
+description: Configure file storage for your self-hosted Formbricks instance
+icon: database
+---
+
+## Overview
+
+Formbricks supports file uploads in surveys and responses. For self-hosted instances, you can configure S3-compatible storage for handling file uploads. This is especially important for serverless deployments (like Vercel) where local file storage is not persistent.
+
+## Storage Backends
+
+Formbricks supports two storage backends:
+
+1. **Local Storage** - Default for traditional server deployments
+2. **S3-Compatible Storage** - Required for serverless environments and recommended for production
+
+## S3 Storage Configuration
+
+### Required Environment Variables
+
+<ParamField path="S3_BUCKET_NAME" type="string" required>
+  The name of your S3 bucket where files will be stored.
+  
+  **Example:** `formbricks-uploads`
+  
+  **Note:** This is the only truly required variable. The bucket must exist before starting Formbricks.
+</ParamField>
+
+### Optional Environment Variables
+
+<ParamField path="S3_ACCESS_KEY" type="string">
+  AWS access key ID or compatible storage service credentials.
+  
+  If not provided, Formbricks will attempt to use the default AWS credential chain (useful for EC2 instances with IAM roles).
+</ParamField>
+
+<ParamField path="S3_SECRET_KEY" type="string">
+  AWS secret access key or compatible storage service credentials.
+  
+  Required if `S3_ACCESS_KEY` is provided.
+</ParamField>
+
+<ParamField path="S3_REGION" type="string">
+  AWS region where your S3 bucket is located.
+  
+  **Examples:** `us-east-1`, `eu-west-1`, `ap-southeast-1`
+  
+  If not specified, defaults to AWS SDK defaults.
+</ParamField>
+
+<ParamField path="S3_ENDPOINT_URL" type="string">
+  Custom endpoint URL for S3-compatible storage providers.
+  
+  Leave empty if using Amazon S3.
+  
+  **Examples:**
+  - MinIO: `https://minio.example.com`
+  - StorJ: `https://gateway.storjshare.io`
+  - DigitalOcean Spaces: `https://nyc3.digitaloceanspaces.com`
+  - Cloudflare R2: `https://<account-id>.r2.cloudflarestorage.com`
+</ParamField>
+
+<ParamField path="S3_FORCE_PATH_STYLE" type="string" default="0">
+  Force path-style URLs instead of virtual-hosted-style URLs.
+  
+  Required for some S3-compatible services like MinIO.
+  
+  **Options:**
+  - `0` - Use virtual-hosted-style (e.g., `bucket-name.s3.amazonaws.com/key`)
+  - `1` - Use path-style (e.g., `s3.amazonaws.com/bucket-name/key`)
+</ParamField>
+
+### Public URL Configuration
+
+<ParamField path="PUBLIC_URL" type="string">
+  Public domain URL for client-facing routes.
+  
+  If you're using a separate domain for your surveys (e.g., `survey.example.com`), set this to override the default `WEBAPP_URL`.
+  
+  **Example:** `https://survey.example.com`
+</ParamField>
+
+## Provider-Specific Setup
+
+### Amazon S3
+
+1. Create an S3 bucket in AWS Console
+2. Create an IAM user with programmatic access
+3. Attach a policy with the following permissions:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      "Resource": [
+        "arn:aws:s3:::your-bucket-name",
+        "arn:aws:s3:::your-bucket-name/*"
+      ]
+    }
+  ]
+}
+```
+
+4. Configure environment variables:
+
+```bash
+S3_ACCESS_KEY=your-access-key-id
+S3_SECRET_KEY=your-secret-access-key
+S3_REGION=us-east-1
+S3_BUCKET_NAME=formbricks-uploads
+```
+
+### MinIO
+
+MinIO is an open-source S3-compatible object storage server.
+
+```bash
+S3_ACCESS_KEY=minioadmin
+S3_SECRET_KEY=minioadmin
+S3_REGION=us-east-1
+S3_BUCKET_NAME=formbricks
+S3_ENDPOINT_URL=http://localhost:9000
+S3_FORCE_PATH_STYLE=1
+```
+
+Run MinIO with Docker:
+
+```bash
+docker run -d \
+  -p 9000:9000 \
+  -p 9001:9001 \
+  --name minio \
+  -e MINIO_ROOT_USER=minioadmin \
+  -e MINIO_ROOT_PASSWORD=minioadmin \
+  minio/minio server /data --console-address ":9001"
+```
+
+Access MinIO Console at `http://localhost:9001` to create your bucket.
+
+### DigitalOcean Spaces
+
+```bash
+S3_ACCESS_KEY=your-spaces-access-key
+S3_SECRET_KEY=your-spaces-secret-key
+S3_REGION=nyc3
+S3_BUCKET_NAME=formbricks-uploads
+S3_ENDPOINT_URL=https://nyc3.digitaloceanspaces.com
+```
+
+### Cloudflare R2
+
+```bash
+S3_ACCESS_KEY=your-r2-access-key-id
+S3_SECRET_KEY=your-r2-secret-access-key
+S3_REGION=auto
+S3_BUCKET_NAME=formbricks-uploads
+S3_ENDPOINT_URL=https://<account-id>.r2.cloudflarestorage.com
+```
+
+### Backblaze B2
+
+```bash
+S3_ACCESS_KEY=your-b2-key-id
+S3_SECRET_KEY=your-b2-application-key
+S3_REGION=us-west-002
+S3_BUCKET_NAME=formbricks-uploads
+S3_ENDPOINT_URL=https://s3.us-west-002.backblazeb2.com
+```
+
+### StorJ
+
+```bash
+S3_ACCESS_KEY=your-storj-access-key
+S3_SECRET_KEY=your-storj-secret-key
+S3_REGION=global
+S3_BUCKET_NAME=formbricks-uploads
+S3_ENDPOINT_URL=https://gateway.storjshare.io
+```
+
+### Wasabi
+
+```bash
+S3_ACCESS_KEY=your-wasabi-access-key
+S3_SECRET_KEY=your-wasabi-secret-key
+S3_REGION=us-east-1
+S3_BUCKET_NAME=formbricks-uploads
+S3_ENDPOINT_URL=https://s3.wasabisys.com
+```
+
+## File Upload Limits
+
+Formbricks has built-in file size limits:
+
+- **Standard uploads:** 10 MB
+- **Large uploads:** 1 GB (for specific use cases)
+
+These limits are configured in the application code and cannot be changed via environment variables.
+
+## Allowed File Types
+
+Formbricks supports the following file types for security reasons:
+
+### Images
+- HEIC, PNG, JPEG, JPG, WebP, ICO
+
+### Documents
+- PDF, EML, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, CSV
+
+### Media
+- MP4, MOV, AVI, MKV, WebM, MP3
+
+### Archives
+- ZIP, RAR, 7Z, TAR
+
+## Access Control
+
+Formbricks supports two access types for uploaded files:
+
+1. **Public** - Files accessible via direct URL
+2. **Private** - Files require authentication to access
+
+### Public Files
+
+Public files are typically used for:
+- Survey background images
+- Logos
+- Public assets
+
+### Private Files
+
+Private files are used for:
+- User-uploaded survey responses
+- Sensitive documents
+- Internal file uploads
+
+Private files are served through a signed URL mechanism that expires after a set period.
+
+## Bucket Configuration
+
+### CORS Configuration
+
+For public file uploads to work correctly, configure CORS on your S3 bucket:
+
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET", "PUT", "POST", "DELETE"],
+    "AllowedOrigins": ["https://your-formbricks-domain.com"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3000
+  }
+]
+```
+
+### Bucket Permissions
+
+For private files, ensure your bucket is not publicly accessible. Formbricks uses signed URLs for private file access.
+
+For public files, you may want to configure a bucket policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PublicReadGetObject",
+      "Effect": "Allow",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::your-bucket-name/public/*"
+    }
+  ]
+}
+```
+
+## Local Storage (Development)
+
+For local development without S3, Formbricks will use local file storage by default when `S3_BUCKET_NAME` is not configured.
+
+**Warning:** Local storage is not suitable for:
+- Serverless deployments (Vercel, AWS Lambda, etc.)
+- Multi-instance deployments
+- Production environments where persistence is required
+
+## Serverless Deployments
+
+When deploying to serverless platforms like Vercel, Netlify, or AWS Lambda:
+
+<Callout type="warning">
+  **S3 storage is required** for serverless environments because the local filesystem is ephemeral and files will be lost between deployments or function invocations.
+</Callout>
+
+Ensure you configure all required S3 environment variables before deploying.
+
+## Troubleshooting
+
+### Files Not Uploading
+
+1. **Check bucket name**: Ensure `S3_BUCKET_NAME` is correct and the bucket exists
+2. **Verify credentials**: Confirm `S3_ACCESS_KEY` and `S3_SECRET_KEY` are valid
+3. **Check permissions**: Ensure the IAM user/role has `PutObject` permissions
+4. **Verify CORS**: Make sure CORS is properly configured on your bucket
+
+### Files Not Accessible
+
+1. **Check bucket policy**: For public files, ensure the bucket policy allows public reads
+2. **Verify region**: Ensure `S3_REGION` matches your bucket's region
+3. **Check endpoint URL**: For S3-compatible services, verify `S3_ENDPOINT_URL` is correct
+
+### Connection Errors
+
+1. **Test endpoint**: Use `curl` or `aws s3 ls` to test connectivity
+2. **Check firewall**: Ensure outbound connections to S3 are allowed
+3. **Verify endpoint format**: Some services require `S3_FORCE_PATH_STYLE=1`
+
+### Performance Issues
+
+1. **Use correct region**: Deploy Formbricks in the same region as your S3 bucket
+2. **Enable CDN**: Consider using CloudFront or similar CDN for public files
+3. **Monitor transfer costs**: Be aware of data transfer costs between regions
+
+## Migration
+
+### From Local to S3
+
+If you're migrating from local storage to S3:
+
+1. Set up S3 bucket and configure environment variables
+2. Copy existing files to S3 using AWS CLI or similar tools
+3. Update database references if needed
+4. Restart Formbricks with S3 configuration
+
+### Between S3 Providers
+
+1. Create new bucket in target provider
+2. Use a tool like `rclone` to sync files between buckets
+3. Update environment variables
+4. Restart Formbricks
+
+## Security Best Practices
+
+1. **Use IAM roles**: On AWS EC2, use IAM roles instead of access keys
+2. **Least privilege**: Grant only necessary S3 permissions
+3. **Encrypt at rest**: Enable S3 bucket encryption
+4. **Secure credentials**: Never commit access keys to version control
+5. **Rotate keys**: Regularly rotate S3 access keys
+6. **Enable versioning**: Turn on S3 versioning to prevent accidental deletions
+7. **Monitor access**: Enable S3 access logging for audit trails
+
+## Cost Optimization
+
+1. **Use lifecycle policies**: Archive old files to cheaper storage classes
+2. **Enable intelligent tiering**: Let AWS automatically optimize storage costs
+3. **Monitor usage**: Set up billing alerts for unexpected increases
+4. **Clean up unused files**: Implement retention policies for temporary files
+5. **Choose the right region**: Balance latency with regional pricing differences
+
+## Next Steps
+
+- [Authentication Configuration](/self-hosting/configuration/authentication) - Set up SSO and OAuth
+- [Email Configuration](/self-hosting/configuration/email) - Configure SMTP for emails
+- [Environment Variables Reference](/self-hosting/configuration/environment-variables) - Complete list of all variables

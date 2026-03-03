@@ -1,0 +1,587 @@
+---
+title: Vue SDK
+description: Integrate Formbricks surveys into your Vue.js application
+icon: vuejs
+---
+
+The Formbricks JavaScript SDK works seamlessly with Vue 3 applications. This guide covers integration for both Vue 3 Composition API and Options API.
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+      ```bash npm
+      npm install @formbricks/js
+      ```
+
+      ```bash yarn
+      yarn add @formbricks/js
+      ```
+
+      ```bash pnpm
+      pnpm add @formbricks/js
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Configure environment variables">
+    Add your Formbricks configuration to `.env`:
+
+    ```bash
+    VITE_FORMBRICKS_ENV_ID=your-environment-id
+    VITE_FORMBRICKS_URL=https://app.formbricks.com
+    ```
+  </Step>
+</Steps>
+
+## Composition API Implementation
+
+### Creating a Composable
+
+Create a composable for Formbricks functionality:
+
+```typescript
+// composables/useFormbricks.ts
+import { onMounted } from 'vue';
+import formbricks from '@formbricks/js';
+import type { TFormbricks } from '@formbricks/js';
+
+export function useFormbricks(): TFormbricks {
+  onMounted(() => {
+    if (typeof window !== 'undefined') {
+      formbricks.setup({
+        environmentId: import.meta.env.VITE_FORMBRICKS_ENV_ID,
+        appUrl: import.meta.env.VITE_FORMBRICKS_URL || 'https://app.formbricks.com',
+      });
+    }
+  });
+
+  return formbricks;
+}
+```
+
+### Initialize in App Component
+
+```vue
+<!-- App.vue -->
+<script setup lang="ts">
+import { useFormbricks } from './composables/useFormbricks';
+
+// Initialize Formbricks
+useFormbricks();
+</script>
+
+<template>
+  <div id="app">
+    <RouterView />
+  </div>
+</template>
+```
+
+### User Identification Composable
+
+```typescript
+// composables/useFormbricksUser.ts
+import { watch } from 'vue';
+import type { Ref } from 'vue';
+import formbricks from '@formbricks/js';
+
+interface User {
+  id: string;
+  email: string;
+  [key: string]: string;
+}
+
+export function useFormbricksUser(user: Ref<User | null>) {
+  watch(
+    user,
+    async (newUser) => {
+      if (newUser) {
+        await formbricks.setUserId(newUser.id);
+        await formbricks.setEmail(newUser.email);
+
+        const { id, email, ...attributes } = newUser;
+        if (Object.keys(attributes).length > 0) {
+          await formbricks.setAttributes(attributes);
+        }
+      } else {
+        await formbricks.logout();
+      }
+    },
+    { immediate: true }
+  );
+}
+```
+
+Usage in a component:
+
+```vue
+<script setup lang="ts">
+import { computed } from 'vue';
+import { useFormbricksUser } from '@/composables/useFormbricksUser';
+import { useAuthStore } from '@/stores/auth';
+
+const authStore = useAuthStore();
+const user = computed(() => authStore.user);
+
+// Automatically identify/logout user when auth state changes
+useFormbricksUser(user);
+</script>
+```
+
+## Options API Implementation
+
+### Global Mixin
+
+Create a global mixin for Formbricks:
+
+```typescript
+// plugins/formbricks.ts
+import formbricks from '@formbricks/js';
+import type { App } from 'vue';
+
+export default {
+  install(app: App) {
+    // Initialize Formbricks
+    if (typeof window !== 'undefined') {
+      formbricks.setup({
+        environmentId: import.meta.env.VITE_FORMBRICKS_ENV_ID,
+        appUrl: import.meta.env.VITE_FORMBRICKS_URL || 'https://app.formbricks.com',
+      });
+    }
+
+    // Make formbricks available globally
+    app.config.globalProperties.$formbricks = formbricks;
+  },
+};
+```
+
+Register the plugin:
+
+```typescript
+// main.ts
+import { createApp } from 'vue';
+import App from './App.vue';
+import formbricksPlugin from './plugins/formbricks';
+
+const app = createApp(App);
+app.use(formbricksPlugin);
+app.mount('#app');
+```
+
+### TypeScript Declaration
+
+Add type declarations for global properties:
+
+```typescript
+// types/vue.d.ts
+import type { TFormbricks } from '@formbricks/js';
+
+declare module '@vue/runtime-core' {
+  interface ComponentCustomProperties {
+    $formbricks: TFormbricks;
+  }
+}
+
+export {};
+```
+
+### Using in Components
+
+```vue
+<script lang="ts">
+import { defineComponent } from 'vue';
+
+export default defineComponent({
+  name: 'UserDashboard',
+  
+  watch: {
+    user: {
+      immediate: true,
+      async handler(newUser) {
+        if (newUser) {
+          await this.$formbricks.setUserId(newUser.id);
+          await this.$formbricks.setEmail(newUser.email);
+        }
+      },
+    },
+  },
+
+  methods: {
+    async trackEvent(eventName: string) {
+      await this.$formbricks.track(eventName);
+    },
+
+    async handleLogout() {
+      await this.$formbricks.logout();
+      // Your logout logic
+    },
+  },
+});
+</script>
+```
+
+## Vue Router Integration
+
+### Composition API with Vue Router
+
+```typescript
+// composables/useFormbricksRouter.ts
+import { watch } from 'vue';
+import { useRoute } from 'vue-router';
+import formbricks from '@formbricks/js';
+
+export function useFormbricksRouter() {
+  const route = useRoute();
+
+  watch(
+    () => route.path,
+    () => {
+      formbricks.registerRouteChange();
+    }
+  );
+}
+```
+
+Use in App.vue:
+
+```vue
+<script setup lang="ts">
+import { useFormbricks } from './composables/useFormbricks';
+import { useFormbricksRouter } from './composables/useFormbricksRouter';
+
+useFormbricks();
+useFormbricksRouter();
+</script>
+```
+
+### Router Guard Approach
+
+```typescript
+// router/index.ts
+import { createRouter, createWebHistory } from 'vue-router';
+import formbricks from '@formbricks/js';
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    // Your routes
+  ],
+});
+
+router.afterEach(() => {
+  formbricks.registerRouteChange();
+});
+
+export default router;
+```
+
+## Tracking Events
+
+### Composition API
+
+```vue
+<script setup lang="ts">
+import formbricks from '@formbricks/js';
+
+const trackFeatureUsage = async (feature: string) => {
+  await formbricks.track(`feature_${feature}_used`);
+};
+
+const handleExport = async () => {
+  // Your export logic
+  await trackFeatureUsage('export');
+};
+</script>
+
+<template>
+  <button @click="handleExport">Export Data</button>
+</template>
+```
+
+### Create a Tracking Utility
+
+```typescript
+// utils/analytics.ts
+import formbricks from '@formbricks/js';
+
+export const analytics = {
+  track: async (eventName: string) => {
+    await formbricks.track(eventName);
+  },
+
+  featureUsed: async (feature: string) => {
+    await formbricks.track(`feature_${feature}_used`);
+  },
+
+  purchaseCompleted: async () => {
+    await formbricks.track('purchase_completed');
+  },
+
+  onboardingStep: async (step: number) => {
+    await formbricks.track(`onboarding_step_${step}`);
+  },
+};
+```
+
+Use in components:
+
+```vue
+<script setup lang="ts">
+import { analytics } from '@/utils/analytics';
+
+const completeOnboarding = async () => {
+  // Your onboarding logic
+  await analytics.track('onboarding_completed');
+};
+</script>
+```
+
+## Pinia Store Integration
+
+Integrate with Pinia for state management:
+
+```typescript
+// stores/auth.ts
+import { defineStore } from 'pinia';
+import formbricks from '@formbricks/js';
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  plan: string;
+}
+
+export const useAuthStore = defineStore('auth', {
+  state: () => ({
+    user: null as User | null,
+  }),
+
+  actions: {
+    async login(user: User) {
+      this.user = user;
+
+      // Identify user in Formbricks
+      await formbricks.setUserId(user.id);
+      await formbricks.setEmail(user.email);
+      await formbricks.setAttributes({
+        name: user.name,
+        plan: user.plan,
+      });
+    },
+
+    async logout() {
+      this.user = null;
+      await formbricks.logout();
+    },
+
+    async updateUserAttributes(attributes: Record<string, string>) {
+      if (!this.user) return;
+
+      await formbricks.setAttributes(attributes);
+    },
+  },
+});
+```
+
+## Nuxt 3 Integration
+
+For Nuxt 3 applications, create a plugin:
+
+```typescript
+// plugins/formbricks.client.ts
+import formbricks from '@formbricks/js';
+
+export default defineNuxtPlugin(() => {
+  const config = useRuntimeConfig();
+
+  formbricks.setup({
+    environmentId: config.public.formbricksEnvId,
+    appUrl: config.public.formbricksUrl || 'https://app.formbricks.com',
+  });
+
+  return {
+    provide: {
+      formbricks,
+    },
+  };
+});
+```
+
+Configure in `nuxt.config.ts`:
+
+```typescript
+export default defineNuxtConfig({
+  runtimeConfig: {
+    public: {
+      formbricksEnvId: process.env.VITE_FORMBRICKS_ENV_ID,
+      formbricksUrl: process.env.VITE_FORMBRICKS_URL,
+    },
+  },
+});
+```
+
+Use in components:
+
+```vue
+<script setup lang="ts">
+const { $formbricks } = useNuxtApp();
+
+const trackEvent = async () => {
+  await $formbricks.track('button_clicked');
+};
+</script>
+```
+
+## TypeScript Example (Complete)
+
+```typescript
+// composables/useFormbricks.ts
+import { onMounted, watch } from 'vue';
+import type { Ref } from 'vue';
+import formbricks from '@formbricks/js';
+import type { TFormbricks } from '@formbricks/js';
+
+interface FormbricksConfig {
+  environmentId: string;
+  appUrl: string;
+}
+
+interface User {
+  id: string;
+  email: string;
+  attributes?: Record<string, string>;
+}
+
+const config: FormbricksConfig = {
+  environmentId: import.meta.env.VITE_FORMBRICKS_ENV_ID,
+  appUrl: import.meta.env.VITE_FORMBRICKS_URL || 'https://app.formbricks.com',
+};
+
+export function useFormbricks(): TFormbricks {
+  onMounted(() => {
+    if (typeof window !== 'undefined') {
+      formbricks.setup(config);
+    }
+  });
+
+  return formbricks;
+}
+
+export function useFormbricksUser(user: Ref<User | null>): void {
+  watch(
+    user,
+    async (newUser) => {
+      if (newUser) {
+        await formbricks.setUserId(newUser.id);
+        await formbricks.setEmail(newUser.email);
+
+        if (newUser.attributes) {
+          await formbricks.setAttributes(newUser.attributes);
+        }
+      } else {
+        await formbricks.logout();
+      }
+    },
+    { immediate: true }
+  );
+}
+
+export function useFormbricksTracking() {
+  return {
+    track: async (eventName: string) => {
+      await formbricks.track(eventName);
+    },
+
+    setAttribute: async (key: string, value: string) => {
+      await formbricks.setAttribute(key, value);
+    },
+
+    setAttributes: async (attributes: Record<string, string>) => {
+      await formbricks.setAttributes(attributes);
+    },
+
+    setLanguage: async (language: string) => {
+      await formbricks.setLanguage(language);
+    },
+  };
+}
+```
+
+Usage:
+
+```vue
+<script setup lang="ts">
+import { ref } from 'vue';
+import { useFormbricks, useFormbricksUser, useFormbricksTracking } from '@/composables/useFormbricks';
+
+// Initialize Formbricks
+useFormbricks();
+
+// Setup user tracking
+const user = ref({
+  id: 'user-123',
+  email: 'user@example.com',
+  attributes: {
+    plan: 'premium',
+    role: 'admin',
+  },
+});
+
+useFormbricksUser(user);
+
+// Get tracking methods
+const { track, setAttributes } = useFormbricksTracking();
+
+const handleAction = async () => {
+  await track('action_performed');
+};
+
+const upgradePlan = async () => {
+  // Your upgrade logic
+  await setAttributes({ plan: 'enterprise' });
+};
+</script>
+```
+
+## Best Practices
+
+1. **Plugin Architecture**: Use Vue plugins for global initialization
+2. **Composables**: Create reusable composables for Formbricks functionality
+3. **Type Safety**: Leverage TypeScript for better developer experience
+4. **Route Tracking**: Implement router integration for accurate page tracking
+5. **Reactive Updates**: Use watchers to sync user state with Formbricks
+
+## Troubleshooting
+
+### SSR Issues (Nuxt)
+
+Make sure to use `.client.ts` suffix for client-only plugins:
+```typescript
+// plugins/formbricks.client.ts
+```
+
+### Vite Configuration
+
+If you encounter build issues, ensure environment variables are properly configured:
+```typescript
+// vite.config.ts
+export default defineConfig({
+  define: {
+    'import.meta.env.VITE_FORMBRICKS_ENV_ID': JSON.stringify(process.env.VITE_FORMBRICKS_ENV_ID),
+  },
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="JavaScript SDK" icon="js" href="/integration/javascript">
+    Learn about core JavaScript SDK features
+  </Card>
+  <Card title="Flutter SDK" icon="mobile" href="/integration/flutter">
+    Integrate Formbricks with Flutter mobile apps
+  </Card>
+</CardGroup>

@@ -1,0 +1,313 @@
+---
+title: 'Link Surveys'
+description: 'Share surveys via link anywhere on the web'
+icon: 'link'
+---
+
+Link surveys are standalone surveys that can be shared via URL. They work independently without requiring SDK integration, making them perfect for sharing via email, social media, QR codes, or embedding on websites.
+
+## How Link Surveys Work
+
+Link surveys are hosted on your Formbricks instance and accessible via a unique URL. Unlike app or website surveys, they don't require user tracking or SDK installation.
+
+```typescript
+// Survey type definition
+export const ZSurveyType = z.enum(["link", "app"]);
+
+type TSurveyType = "link" | "app";
+```
+
+## Creating a Link Survey
+
+<Steps>
+  <Step title="Create a new survey">
+    Navigate to your environment and click **Create Survey**. Choose a template or start from scratch.
+  </Step>
+  
+  <Step title="Set survey type to Link">
+    In the survey editor, ensure the survey type is set to **Link**. This determines how the survey can be distributed.
+  </Step>
+  
+  <Step title="Configure survey content">
+    Add your questions, welcome card, and ending screens. Link surveys support all question types including NPS, rating, multiple choice, and open text.
+  </Step>
+  
+  <Step title="Get your survey URL">
+    Once published, navigate to the **Summary** tab and click **Share** to access your survey link.
+  </Step>
+</Steps>
+
+## Sharing Options
+
+### Multi-Use Links
+
+Multi-use links can be shared with unlimited respondents. This is the default option for link surveys.
+
+```bash
+https://your-domain.com/s/survey-id
+```
+
+**Use cases:**
+- Social media posts
+- Email newsletters
+- Website buttons
+- QR codes
+
+### Single-Use Links
+
+Single-use links work only once per unique ID, preventing duplicate responses.
+
+<CodeGroup>
+
+```typescript Encrypted Single-Use
+// Enable single-use with encryption
+const survey = {
+  singleUse: {
+    enabled: true,
+    isEncrypted: true
+  }
+};
+
+// Generated URL format:
+// https://your-domain.com/s/survey-id?suId=encrypted-id
+```
+
+```typescript Custom Single-Use ID
+// Use your own IDs (unencrypted)
+const survey = {
+  singleUse: {
+    enabled: true,
+    isEncrypted: false
+  }
+};
+
+// Custom URL format:
+// https://your-domain.com/s/survey-id?suId=CUSTOM-ID
+```
+
+</CodeGroup>
+
+<Note>
+Single-use links are perfect for personalized campaigns where each recipient should respond only once.
+</Note>
+
+## Advanced Features
+
+### Link Metadata
+
+Customize how your survey appears when shared on social media or messaging apps.
+
+```typescript
+interface TSurveyMetadata {
+  title?: TI18nString;
+  description?: TI18nString;
+  ogImage?: string;
+}
+```
+
+Configure metadata in the **Link Settings** tab:
+
+<Steps>
+  <Step title="Set link title">
+    The title appears in browser tabs and social media previews.
+  </Step>
+  
+  <Step title="Add description">
+    A brief description shown in link previews.
+  </Step>
+  
+  <Step title="Upload preview image">
+    An Open Graph image (recommended size: 1200x630px) for social sharing.
+  </Step>
+</Steps>
+
+### Data Prefilling
+
+Pre-populate hidden fields with URL parameters to track responses.
+
+```bash
+https://your-domain.com/s/survey-id?source=email&campaign=winter2024
+```
+
+Access hidden fields in your survey:
+
+```typescript
+// Define hidden fields in survey configuration
+const survey = {
+  hiddenFields: {
+    enabled: true,
+    fieldIds: ["source", "campaign"]
+  }
+};
+```
+
+### Source Tracking
+
+Track where responses come from using UTM parameters:
+
+```bash
+https://your-domain.com/s/survey-id?utm_source=twitter&utm_medium=social&utm_campaign=launch
+```
+
+### Custom Start Point
+
+Start the survey at a specific question using the `skipTo` parameter:
+
+```bash
+https://your-domain.com/s/survey-id?skipTo=block-id
+```
+
+## Embedding Link Surveys
+
+### iframe Embed
+
+Embed surveys on any website without SDK integration:
+
+```html
+<div style="position: relative; height:80dvh; overflow:auto;"> 
+  <iframe 
+    src="https://your-domain.com/s/survey-id" 
+    frameborder="0" 
+    style="position: absolute; left:0; top:0; width:100%; height:100%; border:0;">
+  </iframe>
+</div>
+```
+
+### Embed Mode
+
+Add `?embed=true` to remove Formbricks branding and adjust styling for embedded contexts:
+
+```html
+<iframe src="https://your-domain.com/s/survey-id?embed=true" ...></iframe>
+```
+
+## QR Code Generation
+
+Generate QR codes for offline distribution:
+
+<Steps>
+  <Step title="Access QR code tab">
+    In the Share modal, navigate to the **QR Code** tab.
+  </Step>
+  
+  <Step title="Customize appearance">
+    Adjust size, colors, and add your logo.
+  </Step>
+  
+  <Step title="Download and print">
+    Download the QR code as PNG or SVG for print materials.
+  </Step>
+</Steps>
+
+## Email Distribution
+
+Link surveys work perfectly in email campaigns:
+
+<CodeGroup>
+
+```html Email Button
+<a href="https://your-domain.com/s/survey-id?source=email" 
+   style="background: #00C4B8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
+  Take Survey
+</a>
+```
+
+```html Email Embed
+<!-- Full survey embedded in email -->
+<div>
+  <!-- Email HTML generated by Formbricks -->
+  <!-- Access via Share > Email tab -->
+</div>
+```
+
+</CodeGroup>
+
+<Warning>
+Some email clients may block iframes. Test your email campaigns across different clients.
+</Warning>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep URLs short" icon="link">
+    Use a custom domain or URL shortener for cleaner links in print and social media.
+  </Accordion>
+  
+  <Accordion title="Set response limits" icon="gauge">
+    Use the `autoComplete` setting to automatically close surveys after reaching a target response count.
+    
+    ```typescript
+    const survey = {
+      autoComplete: 1000 // Close after 1000 responses
+    };
+    ```
+  </Accordion>
+  
+  <Accordion title="Enable single-use for sensitive data" icon="shield">
+    Prevent duplicate responses and ensure data integrity by enabling single-use links.
+  </Accordion>
+  
+  <Accordion title="Track conversion rates" icon="chart-line">
+    Use hidden fields and UTM parameters to measure which channels drive the most responses.
+  </Accordion>
+</AccordionGroup>
+
+## Response Management
+
+Link surveys don't track individual users unless you:
+
+- Use single-use links with custom IDs
+- Include hidden fields with user identifiers
+- Request contact information in the survey
+
+```typescript
+// Single-use link tracking
+const singleUseConfig = {
+  enabled: true,
+  heading: "This survey can only be taken once",
+  subheading: "You've already completed this survey",
+  isEncrypted: true
+};
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Survey not loading" icon="circle-exclamation">
+    - Verify the survey is published (status: `inProgress`)
+    - Check that the survey hasn't reached its response limit
+    - Ensure the survey isn't closed or expired
+  </Accordion>
+  
+  <Accordion title="Single-use link shows 'already completed'" icon="ban">
+    - Each single-use ID can only be used once
+    - Generate a new single-use link for each recipient
+    - Check if the link has been shared or forwarded
+  </Accordion>
+  
+  <Accordion title="Hidden fields not capturing data" icon="eye-slash">
+    - Ensure hidden fields are enabled in survey settings
+    - Verify URL parameter names match configured field IDs
+    - Check for typos in URL parameters
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Email Surveys" icon="envelope" href="/surveys/email-surveys">
+    Learn how to send surveys directly via email
+  </Card>
+  
+  <Card title="Hidden Fields" icon="eye-slash" href="/surveys/features/hidden-fields">
+    Track additional data with hidden fields
+  </Card>
+  
+  <Card title="Custom Styling" icon="palette" href="/surveys/features/custom-styling">
+    Customize survey appearance for your brand
+  </Card>
+  
+  <Card title="Multi-Language" icon="language" href="/surveys/features/multi-language">
+    Create surveys in multiple languages
+  </Card>
+</CardGroup>

@@ -1,0 +1,521 @@
+---
+title: Webhooks
+description: Send real-time survey response data to external services via HTTP webhooks
+icon: webhook
+---
+
+Webhooks allow you to send survey response data to external services in real-time. When a respondent completes or updates a survey, Formbricks can automatically POST the data to your specified endpoint.
+
+## Overview
+
+Webhooks enable you to:
+- **Receive real-time notifications** when surveys are completed
+- **Integrate with external systems** (CRM, analytics, databases)
+- **Trigger workflows** based on survey responses
+- **Sync data** with your existing infrastructure
+
+## Webhook Triggers
+
+Formbricks supports three webhook triggers:
+
+- **`responseCreated`**: Fired when a new response is started
+- **`responseUpdated`**: Fired when an existing response is modified
+- **`responseFinished`**: Fired when a response is completed
+
+<Note>
+  You can subscribe to one, two, or all three triggers for each webhook.
+</Note>
+
+## Webhook Configuration
+
+Webhooks are configured at the environment level and can be scoped to specific surveys:
+
+```typescript
+{
+  "id": "webhook_123",
+  "name": "CRM Integration",
+  "url": "https://api.yourapp.com/webhooks/survey-responses",
+  "source": "user",
+  "triggers": ["responseFinished"],
+  "surveyIds": ["survey_abc", "survey_xyz"],
+  "environmentId": "env_123",
+  "secret": "whsec_abc123..."  // For HMAC signature verification
+}
+```
+
+Reference: `packages/database/zod/webhooks.ts:7-50`
+
+## Setting Up Webhooks
+
+<Steps>
+  <Step title="Navigate to Integrations">
+    Go to **Workspace Settings > Integrations > Webhooks**.
+  </Step>
+  
+  <Step title="Add New Webhook">
+    Click "Add Webhook" to open the configuration modal.
+  </Step>
+  
+  <Step title="Configure Endpoint">
+    Enter your webhook URL and optionally test the endpoint to verify it's accessible.
+  </Step>
+  
+  <Step title="Select Triggers">
+    Choose which events should trigger the webhook:
+    - Response Created
+    - Response Updated
+    - Response Finished
+  </Step>
+  
+  <Step title="Select Surveys">
+    Choose which surveys should send data to this webhook, or select "All Surveys" to capture everything.
+  </Step>
+  
+  <Step title="Save and Test">
+    Save the webhook configuration. Formbricks will send a test payload to verify the endpoint.
+  </Step>
+</Steps>
+
+## Webhook Payload
+
+When a webhook is triggered, Formbricks sends a POST request with the following structure:
+
+```json
+{
+  "event": "responseFinished",
+  "webhookId": "webhook_123",
+  "data": {
+    "id": "response_456",
+    "createdAt": "2024-03-01T10:30:00.000Z",
+    "updatedAt": "2024-03-01T10:35:00.000Z",
+    "surveyId": "survey_abc",
+    "finished": true,
+    "data": {
+      "question_1": "Very satisfied",
+      "question_2": 5,
+      "question_3": ["Feature A", "Feature B"]
+    },
+    "meta": {
+      "userId": "user_789",
+      "source": "email",
+      "userAgent": "Mozilla/5.0..."
+    },
+    "tags": ["important", "vip-customer"]
+  }
+}
+```
+
+### Payload Fields
+
+- **`event`**: The trigger type (`responseCreated`, `responseUpdated`, `responseFinished`)
+- **`webhookId`**: The ID of the webhook configuration
+- **`data`**: Response object containing:
+  - `id`: Response ID
+  - `surveyId`: Survey ID
+  - `finished`: Whether the response is complete
+  - `data`: Question responses (keyed by question ID)
+  - `meta`: Hidden fields and metadata
+  - `tags`: Associated tags
+  - `createdAt`, `updatedAt`: Timestamps
+
+## Security
+
+### HMAC Signature Verification
+
+Formbricks signs webhook payloads using HMAC-SHA256. Verify signatures to ensure requests are from Formbricks:
+
+**Headers sent with each webhook:**
+```
+X-Formbricks-Signature: sha256=abc123...
+Content-Type: application/json
+```
+
+**Verification example (Node.js):**
+
+```javascript
+const crypto = require('crypto');
+
+function verifyWebhookSignature(payload, signature, secret) {
+  const expectedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(JSON.stringify(payload))
+    .digest('hex');
+  
+  const receivedSignature = signature.replace('sha256=', '');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(expectedSignature),
+    Buffer.from(receivedSignature)
+  );
+}
+
+// Express.js middleware
+app.post('/webhooks/formbricks', (req, res) => {
+  const signature = req.headers['x-formbricks-signature'];
+  const secret = process.env.FORMBRICKS_WEBHOOK_SECRET;
+  
+  if (!verifyWebhookSignature(req.body, signature, secret)) {
+    return res.status(401).send('Invalid signature');
+  }
+  
+  // Process webhook...
+  res.status(200).send('OK');
+});
+```
+
+**Python example:**
+
+```python
+import hmac
+import hashlib
+import json
+from flask import Flask, request, abort
+
+app = Flask(__name__)
+
+def verify_webhook_signature(payload, signature, secret):
+    expected_signature = hmac.new(
+        secret.encode('utf-8'),
+        json.dumps(payload).encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    
+    received_signature = signature.replace('sha256=', '')
+    
+    return hmac.compare_digest(expected_signature, received_signature)
+
+@app.route('/webhooks/formbricks', methods=['POST'])
+def handle_webhook():
+    signature = request.headers.get('X-Formbricks-Signature')
+    secret = os.environ['FORMBRICKS_WEBHOOK_SECRET']
+    
+    if not verify_webhook_signature(request.json, signature, secret):
+        abort(401)
+    
+    # Process webhook
+    return 'OK', 200
+```
+
+### Best Practices for Security
+
+<Warning>
+  **Always verify signatures**: Never process webhook data without verifying the HMAC signature.
+</Warning>
+
+- Store webhook secrets securely (environment variables, secret managers)
+- Use HTTPS endpoints only
+- Implement rate limiting on your webhook endpoint
+- Log all webhook attempts for security auditing
+- Rotate webhook secrets periodically
+
+## Configuration Examples
+
+### Example 1: Slack Notification
+
+Send survey completions to a Slack channel:
+
+```json
+{
+  "name": "Slack Notifications",
+  "url": "https://hooks.slack.com/services/YOUR/WEBHOOK/URL",
+  "source": "user",
+  "triggers": ["responseFinished"],
+  "surveyIds": []
+}
+```
+
+**Your endpoint transforms the data:**
+
+```javascript
+app.post('/slack-webhook', async (req, res) => {
+  const { event, data } = req.body;
+  
+  const message = {
+    text: `New survey response received!`,
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*New ${event}*\nSurvey: ${data.surveyId}\nResponse ID: ${data.id}`
+        }
+      },
+      {
+        type: "section",
+        fields: Object.entries(data.data).map(([key, value]) => ({
+          type: "mrkdwn",
+          text: `*${key}:*\n${value}`
+        }))
+      }
+    ]
+  };
+  
+  await fetch('https://hooks.slack.com/services/...', {
+    method: 'POST',
+    body: JSON.stringify(message)
+  });
+  
+  res.status(200).send('OK');
+});
+```
+
+### Example 2: CRM Integration
+
+Sync responses to a CRM:
+
+```json
+{
+  "name": "Salesforce Sync",
+  "url": "https://api.yourapp.com/salesforce/sync",
+  "source": "user",
+  "triggers": ["responseFinished"],
+  "surveyIds": ["nps_survey", "feedback_survey"]
+}
+```
+
+**Backend handler:**
+
+```javascript
+app.post('/salesforce/sync', async (req, res) => {
+  const { data } = req.body;
+  
+  // Extract email from hidden fields
+  const email = data.meta?.email;
+  if (!email) {
+    return res.status(400).send('Email required');
+  }
+  
+  // Find or create contact in Salesforce
+  const contact = await salesforce.findOrCreateContact(email);
+  
+  // Create a task/note with survey feedback
+  await salesforce.createTask({
+    contactId: contact.id,
+    subject: `Survey Response: ${data.surveyId}`,
+    description: JSON.stringify(data.data, null, 2),
+    status: 'Completed',
+    activityDate: new Date(data.createdAt)
+  });
+  
+  res.status(200).send('OK');
+});
+```
+
+### Example 3: Database Storage
+
+Store responses in your database:
+
+```json
+{
+  "name": "Database Sync",
+  "url": "https://api.yourapp.com/surveys/responses",
+  "source": "user",
+  "triggers": ["responseCreated", "responseUpdated", "responseFinished"],
+  "surveyIds": []
+}
+```
+
+**Backend handler:**
+
+```javascript
+app.post('/surveys/responses', async (req, res) => {
+  const { event, data } = req.body;
+  
+  switch (event) {
+    case 'responseCreated':
+      await db.responses.create({
+        id: data.id,
+        surveyId: data.surveyId,
+        data: data.data,
+        meta: data.meta,
+        createdAt: data.createdAt,
+        status: 'in_progress'
+      });
+      break;
+      
+    case 'responseUpdated':
+      await db.responses.update(data.id, {
+        data: data.data,
+        updatedAt: data.updatedAt
+      });
+      break;
+      
+    case 'responseFinished':
+      await db.responses.update(data.id, {
+        data: data.data,
+        status: 'completed',
+        finishedAt: data.updatedAt
+      });
+      break;
+  }
+  
+  res.status(200).send('OK');
+});
+```
+
+### Example 4: Analytics Pipeline
+
+Send to analytics platform:
+
+```json
+{
+  "name": "Analytics Pipeline",
+  "url": "https://api.yourapp.com/analytics/events",
+  "source": "user",
+  "triggers": ["responseFinished"],
+  "surveyIds": []
+}
+```
+
+**Handler with transformation:**
+
+```javascript
+app.post('/analytics/events', async (req, res) => {
+  const { data } = req.body;
+  
+  // Transform to analytics event format
+  const analyticsEvent = {
+    event: 'survey_completed',
+    userId: data.meta?.userId,
+    properties: {
+      surveyId: data.surveyId,
+      responseId: data.id,
+      ...data.data,
+      ...data.meta,
+      timestamp: data.updatedAt
+    }
+  };
+  
+  // Send to analytics service (Segment, Mixpanel, etc.)
+  await analytics.track(analyticsEvent);
+  
+  res.status(200).send('OK');
+});
+```
+
+## Webhook Source Types
+
+The `source` field indicates how the webhook was created:
+
+- **`user`**: Created manually by a user
+- **`zapier`**: Created via Zapier integration
+- **`make`**: Created via Make (formerly Integromat)
+- **`n8n`**: Created via n8n workflow automation
+
+## Retry Logic
+
+Formbricks automatically retries failed webhook deliveries:
+
+- **Retry attempts**: Up to 3 retries
+- **Backoff strategy**: Exponential backoff (1s, 5s, 25s)
+- **Success criteria**: HTTP status 200-299
+- **Timeout**: 30 seconds per attempt
+
+<Tip>
+  Return a 200 status code as quickly as possible. Process webhook data asynchronously if needed.
+</Tip>
+
+## Testing Webhooks
+
+Use the built-in test functionality when creating a webhook:
+
+```javascript
+// Test endpoint that always succeeds
+app.post('/webhooks/test', (req, res) => {
+  console.log('Test webhook received:', req.body);
+  res.status(200).json({ message: 'Test successful' });
+});
+```
+
+**Local testing with ngrok:**
+
+```bash
+# Start your local server
+node server.js
+
+# In another terminal, start ngrok
+ngrok http 3000
+
+# Use the ngrok URL in Formbricks
+https://abc123.ngrok.io/webhooks/formbricks
+```
+
+## Practical Use Cases
+
+### Customer Support
+- Create support tickets from negative feedback
+- Update customer records with satisfaction scores
+- Trigger follow-up emails based on responses
+
+### Product Analytics
+- Track feature requests and bug reports
+- Measure NPS and customer satisfaction trends
+- Correlate survey data with product usage
+
+### Marketing Automation
+- Add respondents to email campaigns
+- Update contact segments based on feedback
+- Trigger personalized follow-ups
+
+### Data Warehousing
+- Sync survey data to BigQuery, Snowflake, or Redshift
+- Build custom reports and dashboards
+- Combine with other data sources for analysis
+
+## Error Handling
+
+**Return appropriate status codes:**
+
+```javascript
+app.post('/webhooks/formbricks', async (req, res) => {
+  try {
+    // Verify signature
+    if (!verifySignature(req)) {
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
+    
+    // Validate payload
+    if (!req.body.data) {
+      return res.status(400).json({ error: 'Missing data' });
+    }
+    
+    // Process webhook (keep this fast!)
+    await processWebhook(req.body);
+    
+    // Success
+    res.status(200).json({ received: true });
+    
+  } catch (error) {
+    console.error('Webhook processing error:', error);
+    
+    // Return 500 to trigger retry
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+```
+
+## Best Practices
+
+<Tip>
+  **Idempotency**: Design webhook handlers to be idempotent. The same webhook may be delivered multiple times.
+</Tip>
+
+- **Quick Response**: Return 200 immediately, process asynchronously
+- **Error Logging**: Log all webhook attempts for debugging
+- **Monitoring**: Set up alerts for webhook failures
+- **Versioning**: Version your webhook endpoints for backward compatibility
+- **Documentation**: Document expected payloads for your team
+- **Testing**: Test with all trigger types before going live
+
+## Implementation Reference
+
+Webhook implementation can be found in:
+- Type definitions: `packages/database/zod/webhooks.ts`
+- UI components: `apps/web/modules/integrations/webhooks/components/add-webhook-modal.tsx:39`
+- Webhook utilities: `apps/web/modules/integrations/webhooks/lib/utils`
+
+## Related Features
+
+- [Hidden Fields](/surveys/features/hidden-fields) - Include hidden field data in webhook payloads
+- [Conditional Logic](/surveys/features/conditional-logic) - Trigger different webhooks for different paths
+- [Multi-Language](/surveys/features/multi-language) - Language info included in webhook data

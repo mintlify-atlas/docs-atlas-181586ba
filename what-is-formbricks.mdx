@@ -1,0 +1,199 @@
+---
+title: What is Formbricks?
+description: An open-source experience management platform for modern product teams
+icon: compass
+---
+
+Formbricks is a **free and open-source survey platform** designed to help teams gather user feedback at every stage of the customer journey. Unlike traditional survey tools, Formbricks combines the flexibility of self-hosting with the power of contextual, trigger-based surveys that reach users at the right moment.
+
+## The Formbricks Philosophy
+
+Life's too short for mediocre user experiences. Formbricks exists to help teams:
+
+- **Understand users deeply** through continuous, contextual feedback
+- **Make data-driven decisions** with real insights, not assumptions
+- **Own their data** with privacy-first, open-source infrastructure
+- **Move fast** without sacrificing quality or user trust
+
+## What Makes Formbricks Different?
+
+### 1. Contextual Survey Triggering
+
+Instead of random email surveys with low response rates, Formbricks lets you trigger surveys based on **what users actually do** in your app:
+
+- Show a feedback survey when users complete onboarding
+- Ask about a feature immediately after they use it
+- Measure satisfaction at key conversion points
+- Target specific user segments with custom attributes
+
+**Result**: 6-10x higher response rates compared to traditional surveys.
+
+### 2. Privacy-First & Open Source
+
+Formbricks is licensed under AGPLv3, which means:
+
+- **Full transparency**: Review every line of code on GitHub
+- **Self-hosting**: Deploy on your infrastructure and keep complete data control
+- **No vendor lock-in**: Export your data anytime, in any format
+- **Community-driven**: Contribute features, report issues, shape the roadmap
+
+### 3. Multi-Channel Survey Distribution
+
+Reach users wherever they are:
+
+<CardGroup cols={2}>
+  <Card title="Link Surveys" icon="link">
+    Share via email, SMS, QR codes, or social media. Perfect for reaching users outside your app.
+  </Card>
+  <Card title="In-App Surveys" icon="mobile">
+    Embed surveys directly in your web or mobile app (React Native supported) with our SDK.
+  </Card>
+  <Card title="Website Surveys" icon="browser">
+    Trigger surveys based on user behavior—no backend integration required.
+  </Card>
+  <Card title="Email Surveys" icon="envelope">
+    Send surveys via email integrations with full tracking and analytics.
+  </Card>
+</CardGroup>
+
+## Core Use Cases
+
+### Product Development
+
+- **Feature validation**: Test concepts before building
+- **PMF measurement**: Run Sean Ellis tests and NPS surveys
+- **Beta feedback**: Gather insights from early adopters
+- **Prioritization**: Let users vote on roadmap items
+
+### User Experience Research
+
+- **Onboarding optimization**: Find and fix drop-off points
+- **Usability testing**: Identify friction in key workflows
+- **Interview recruitment**: Find users for deeper research
+- **Pain point discovery**: Understand what frustrates users
+
+### Customer Success
+
+- **CSAT tracking**: Measure satisfaction at key touchpoints
+- **Churn prevention**: Survey users before they leave
+- **Feature adoption**: Understand why features aren't used
+- **Support quality**: Gauge support interaction satisfaction
+
+### Marketing & Growth
+
+- **Landing page optimization**: Test messaging and CTAs
+- **Referral programs**: Ask satisfied users for referrals
+- **Market research**: Validate assumptions about your audience
+- **Lead qualification**: Segment leads based on survey responses
+
+## How Formbricks Works
+
+<Steps>
+  <Step title="Define Your Survey">
+    Use the no-code editor to create surveys with multiple question types: multiple choice, open text, rating scales, NPS, file uploads, and more.
+  </Step>
+  <Step title="Set Targeting Rules">
+    Choose who sees your survey based on:
+    - User actions (button clicks, page views, custom events)
+    - Contact attributes (plan type, signup date, location)
+    - Survey history (prevent survey fatigue)
+    - Time-based triggers (after X days, at specific times)
+  </Step>
+  <Step title="Deploy Everywhere">
+    Share as a link, embed in your app, or trigger contextually on your website—one survey, multiple channels.
+  </Step>
+  <Step title="Analyze & Act">
+    View responses in real-time, filter and segment data, export to your tools, and set up automated workflows via webhooks.
+  </Step>
+</Steps>
+
+## Architecture Overview
+
+Formbricks is organized around four core concepts:
+
+<CardGroup cols={2}>
+  <Card title="Surveys" icon="clipboard-question" href="/concepts/surveys">
+    The questions you ask, how they're displayed, and when they're triggered
+  </Card>
+  <Card title="Environments" icon="layer-group" href="/concepts/environments">
+    Separate production and development data within each project
+  </Card>
+  <Card title="Contacts" icon="users" href="/concepts/contacts">
+    Individual users or respondents with custom attributes
+  </Card>
+  <Card title="Responses" icon="message" href="/concepts/responses">
+    The answers users provide, with rich metadata and filtering
+  </Card>
+</CardGroup>
+
+## Who Uses Formbricks?
+
+Formbricks is trusted by product teams at companies of all sizes:
+
+- **Startups**: Validate product-market fit and iterate quickly
+- **Scale-ups**: Build systematic feedback loops as you grow
+- **Enterprises**: Maintain data sovereignty with self-hosting
+- **Agencies**: Manage multiple client projects from one dashboard
+
+## Pricing Philosophy
+
+### Open Source (AGPLv3)
+
+- **Free forever** for core surveying features
+- No limits on responses, surveys, or team members
+- Self-host on your infrastructure
+- Full access to the codebase
+
+### Cloud Hosting
+
+- **Free tier** with generous limits to get started
+- **Paid plans** for higher volume and premium features
+- No infrastructure management required
+
+### Enterprise Edition
+
+- **Advanced features** for large teams (SSO, advanced permissions, white-labeling)
+- Available for both cloud and self-hosted deployments
+- Priority support and SLAs
+
+<Note>
+  Formbricks monetizes through managed cloud hosting and enterprise features—the core survey platform remains free and open source forever.
+</Note>
+
+## Technology Stack
+
+Formbricks is built with modern, battle-tested technologies:
+
+- **Next.js 16** (App Router) for the web application
+- **React 19** for the UI
+- **TypeScript** throughout for type safety
+- **Prisma** as the ORM with PostgreSQL
+- **TailwindCSS** for styling
+- **Auth.js** for authentication
+- **Turborepo** for monorepo management
+- **Vitest** & **Playwright** for testing
+
+The codebase is organized as a pnpm monorepo with:
+- `apps/web` - Main Next.js application
+- `packages/database` - Prisma schema and migrations
+- `packages/surveys` - Survey rendering engine
+- `packages/types` - Shared TypeScript types
+
+## Getting Started
+
+Ready to start gathering better feedback?
+
+<CardGroup cols={2}>
+  <Card title="Try Formbricks Cloud" icon="cloud" href="https://app.formbricks.com/auth/signup">
+    Create an account and launch your first survey in 5 minutes
+  </Card>
+  <Card title="Follow the Quickstart" icon="rocket" href="/quickstart">
+    Step-by-step guide from signup to your first response
+  </Card>
+  <Card title="Self-Host Formbricks" icon="server" href="/self-hosting">
+    Deploy on your own infrastructure with Docker or Kubernetes
+  </Card>
+  <Card title="Explore the API" icon="code" href="/api-reference">
+    Integrate Formbricks into your existing stack
+  </Card>
+</CardGroup>

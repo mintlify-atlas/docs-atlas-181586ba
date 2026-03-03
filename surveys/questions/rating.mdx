@@ -1,0 +1,234 @@
+---
+title: Rating
+description: Collect ratings using numbers, stars, or smiley faces
+---
+
+The Rating question type allows respondents to rate something on a scale using numbers, stars, or smiley faces. It's perfect for measuring satisfaction, quality, or agreement.
+
+## Configuration
+
+### Basic Properties
+
+```typescript
+type TSurveyRatingElement = {
+  id: string;                    // Unique identifier
+  type: "rating";                // Question type
+  headline: TI18nString;         // Main question text (required)
+  subheader?: TI18nString;       // Optional descriptive text
+  required: boolean;             // Whether response is mandatory
+  scale: "number" | "smiley" | "star"; // Visual scale type
+  range: 3 | 4 | 5 | 6 | 7 | 10; // Number of rating options
+  lowerLabel?: TI18nString;      // Label for lowest rating
+  upperLabel?: TI18nString;      // Label for highest rating
+  isColorCodingEnabled?: boolean; // Color-code ratings (default: false)
+  imageUrl?: string;             // Optional image URL
+  videoUrl?: string;             // Optional video URL
+  isDraft?: boolean;             // Mark as draft
+};
+```
+
+### Scale Types
+
+Choose how the rating is visually represented:
+
+- **number**: Numeric buttons (e.g., 1, 2, 3, 4, 5)
+- **star**: Star icons (★★★★★)
+- **smiley**: Emoji faces (😞 😐 😊)
+
+### Range Options
+
+Select the number of rating points:
+
+- **3**: Simple scale (e.g., Bad, OK, Good)
+- **4**: Even scale without middle option
+- **5**: Classic 5-star rating
+- **6**: Even scale for more granularity
+- **7**: Extended scale
+- **10**: Maximum granularity
+
+**Common combinations:**
+- Stars: Usually 5
+- Smileys: Usually 3 or 5
+- Numbers: Any range works, 5 and 10 are most common
+
+### Color Coding
+
+When `isColorCodingEnabled: true`, ratings are color-coded:
+
+- Low ratings: Red/negative colors
+- Middle ratings: Yellow/neutral colors
+- High ratings: Green/positive colors
+
+### Labels
+
+Add context with `lowerLabel` and `upperLabel`:
+
+```typescript
+lowerLabel: { default: "Not at all satisfied" },
+upperLabel: { default: "Extremely satisfied" }
+```
+
+## Use Cases
+
+### 5-Star Rating
+
+Classic product or service rating:
+
+```typescript
+{
+  id: "product_rating",
+  type: "rating",
+  headline: { default: "How would you rate our product?" },
+  scale: "star",
+  range: 5,
+  required: true,
+  lowerLabel: { default: "Poor" },
+  upperLabel: { default: "Excellent" }
+}
+```
+
+### Customer Satisfaction
+
+Measure satisfaction with smiley faces:
+
+```typescript
+{
+  id: "satisfaction",
+  type: "rating",
+  headline: { default: "How satisfied are you with your experience?" },
+  scale: "smiley",
+  range: 5,
+  required: true,
+  isColorCodingEnabled: true
+}
+```
+
+### Numeric Scale
+
+1-10 rating scale:
+
+```typescript
+{
+  id: "likelihood",
+  type: "rating",
+  headline: { default: "How likely are you to use this feature?" },
+  scale: "number",
+  range: 10,
+  required: false,
+  lowerLabel: { default: "Not at all likely" },
+  upperLabel: { default: "Extremely likely" },
+  isColorCodingEnabled: true
+}
+```
+
+### Quick Feedback
+
+Simple 3-point scale:
+
+```typescript
+{
+  id: "helpful",
+  type: "rating",
+  headline: { default: "Was this article helpful?" },
+  scale: "smiley",
+  range: 3,
+  required: false
+}
+```
+
+### Agreement Scale
+
+7-point Likert-style scale:
+
+```typescript
+{
+  id: "agreement",
+  type: "rating",
+  headline: { default: "The product is easy to use" },
+  scale: "number",
+  range: 7,
+  required: true,
+  lowerLabel: { default: "Strongly disagree" },
+  upperLabel: { default: "Strongly agree" }
+}
+```
+
+### Quality Assessment
+
+Color-coded quality rating:
+
+```typescript
+{
+  id: "quality",
+  type: "rating",
+  headline: { default: "How would you rate the quality of our service?" },
+  subheader: { default: "Consider reliability, speed, and accuracy" },
+  scale: "star",
+  range: 5,
+  required: true,
+  isColorCodingEnabled: true,
+  lowerLabel: { default: "Very poor" },
+  upperLabel: { default: "Excellent" }
+}
+```
+
+## Best Practices
+
+1. **Choose appropriate ranges**:
+   - Use 5 for standard ratings
+   - Use 3 for quick feedback
+   - Use 7-10 for research and detailed assessment
+   - Use even numbers (4, 6) to force positive/negative choice
+
+2. **Match scale to purpose**:
+   - Stars: Product quality, reviews
+   - Smileys: User experience, satisfaction
+   - Numbers: Agreement scales, likelihood, intensity
+
+3. **Add descriptive labels**: Help respondents understand what each end of the scale means
+
+4. **Use color coding thoughtfully**: Enable for clarity but ensure it matches your brand
+
+5. **Consider mobile UX**: Larger ranges (7-10) may be harder on mobile; 5 or fewer is easier to tap
+
+6. **Make optional when appropriate**: Not all ratings need to be required
+
+7. **Be consistent**: Use the same scale type and range for similar questions
+
+## Scale Selection Guide
+
+### When to use 3-point
+- Quick, simple feedback
+- Binary + neutral option needed
+- Mobile-first surveys
+- Examples: Good/OK/Bad, Yes/Maybe/No
+
+### When to use 5-point
+- Standard satisfaction surveys
+- Product ratings
+- Most common and recognizable
+- Good balance of granularity and simplicity
+
+### When to use 7-point or 10-point
+- Research studies
+- Detailed customer feedback
+- When you need more granular data
+- Professional assessments
+
+### When to use even numbers (4, 6)
+- Force respondents to lean positive or negative
+- Eliminate neutral middle option
+- When you need clearer directional feedback
+
+## Accessibility
+
+- Each rating option is keyboard accessible
+- Screen readers announce the scale type and range
+- Labels provide context for the scale endpoints
+- Color coding is supplemented with visual icons
+- Focus indicators show the current selection
+
+## Related Question Types
+
+- [NPS](/surveys/questions/nps) - For Net Promoter Score (0-10 likelihood to recommend)
+- [Single Select](/surveys/questions/single-select) - For non-numeric choice questions

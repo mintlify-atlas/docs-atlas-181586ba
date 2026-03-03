@@ -1,80 +1,273 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart Guide
+description: Create and launch your first survey in under 5 minutes
+icon: rocket
 ---
 
-## Get started in three steps
+This guide will walk you through creating a Formbricks account, setting up your first environment, building a survey, and viewing your first responses. Let's get started!
 
-Get your documentation site running locally and make your first customization.
+## Overview
 
-### Step 1: Set up your local environment
+In this quickstart, you'll:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+1. Sign up for a free Formbricks account
+2. Choose your survey type and complete onboarding
+3. Create your first survey from a template
+4. Configure and publish your survey
+5. Share it and collect responses
 
-### Step 2: Deploy your changes
+**Time to complete**: ~5 minutes
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+<Note>
+  This guide uses Formbricks Cloud for the fastest setup. You can also [self-host Formbricks](/self-hosting) if you prefer.
+</Note>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+---
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+## Step-by-Step Walkthrough
 
-### Step 3: Go live
+<Steps>
+  <Step title="Create Your Formbricks Account">
+    Navigate to [app.formbricks.com/auth/signup](https://app.formbricks.com/auth/signup) and create your free account.
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    You can sign up with:
+    - Email and password
+    - Google OAuth
+    - GitHub OAuth
 
-## Next steps
+    After signing up, you'll be taken to the onboarding flow.
 
-Now that you have your docs running, explore these key features:
+    <img src="https://res.cloudinary.com/dwdb9tvii/image/upload/v1738113228/image_d11uiy.png" alt="Formbricks signup" />
+  </Step>
+
+  <Step title="Choose Your Survey Type">
+    Formbricks offers two main survey types:
+
+    **Link Surveys**
+    - Share via email, SMS, or social media
+    - No technical setup required
+    - Great for reaching users outside your app
+    - Best for: Customer research, NPS, market surveys
+
+    **In-Product Surveys**
+    - Embedded directly in your app or website
+    - Triggered by user actions (page views, button clicks)
+    - 6-10x higher response rates
+    - Best for: Feature feedback, onboarding, in-app NPS
+
+    <img src="https://res.cloudinary.com/dwdb9tvii/image/upload/v1738114328/image_tv0jmj.png" alt="Choose survey type" />
+
+    <Tip>
+      **New to Formbricks?** Start with a **Link Survey**—it's the easiest way to see Formbricks in action. You can always add in-product surveys later.
+    </Tip>
+  </Step>
+
+  <Step title="Complete Environment Setup">
+    Formbricks automatically creates your first **Organization** and **Project**. Each project has two environments:
+
+    - **Development**: For testing surveys before going live
+    - **Production**: For real user data
+
+    <Note>
+      **Environments** are isolated data containers. Surveys, contacts, and responses in Development never mix with Production data. Learn more in [Concepts: Environments](/concepts/environments).
+    </Note>
+
+    If you selected **In-Product Surveys**, follow the instructions to install the Formbricks SDK:
+
+    ```bash
+    npm install @formbricks/js
+    ```
+
+    ```typescript
+    import formbricks from "@formbricks/js";
+
+    formbricks.init({
+      environmentId: "your-environment-id",
+      apiHost: "https://app.formbricks.com",
+    });
+    ```
+
+    Once Formbricks receives data from your app, you'll see a confirmation:
+
+    <img src="https://res.cloudinary.com/dwdb9tvii/image/upload/v1738114793/image_lij7kw.png" alt="Setup confirmed" />
+  </Step>
+
+  <Step title="Create Your First Survey">
+    After completing setup, you'll see a gallery of pre-built survey templates:
+
+    <img src="https://res.cloudinary.com/dwdb9tvii/image/upload/v1738115025/image_yyuuzn.jpg" alt="Survey templates" />
+
+    Popular templates include:
+    - **Product-Market Fit (PMF)**: The Sean Ellis test
+    - **Net Promoter Score (NPS)**: Measure customer loyalty
+    - **Feature Chaser**: Identify must-have features
+    - **Onboarding Experience**: Optimize your first-run flow
+    - **Interview Recruitment**: Find users for research
+
+    **Choose a template** that matches your goal. For this guide, we'll use **Product-Market Fit**.
+
+    You'll be taken to the **Survey Editor** where you can:
+    - Edit questions and answer options
+    - Add or remove questions
+    - Customize the welcome card and ending message
+    - Add logic jumps and branching
+
+    <Tip>
+      Keep your first survey simple! You can always iterate based on the responses you get.
+    </Tip>
+  </Step>
+
+  <Step title="Configure Survey Settings">
+    Click the **Settings** tab to configure how and when your survey appears.
+
+    ### Key Settings for Link Surveys
+
+    **Survey Status**
+    - Set to **In Progress** to publish your survey
+    - **Draft**: Survey is not accessible
+    - **Paused**: Temporarily stop collecting responses
+    - **Completed**: Archive the survey
+
+    **Close Survey**
+    - Set a specific end date
+    - Close after X responses
+    - Leave open indefinitely
+
+    **Redirect URL**
+    - Redirect users after completing the survey (e.g., to a thank-you page)
+
+    **Survey Protection**
+    - Add a PIN to restrict access
+    - Enable email verification
+    - Limit to one response per email
+
+    ### Key Settings for In-Product Surveys
+
+    **Survey Trigger**
+    - Add actions that trigger the survey (e.g., "Page View", "Button Click")
+    - For testing, use **Page View** to show the survey on any page load
+
+    <img src="https://res.cloudinary.com/dwdb9tvii/image/upload/v1738114328/image_tv0jmj.png" alt="Page view trigger" />
+
+    **Recontact Options**
+    - Control how often users see surveys to avoid fatigue
+    - For testing: Set to "Display multiple times" and "Show again immediately"
+
+    <Warning>
+      **Important for testing**: Formbricks defaults to showing surveys only once to prevent user fatigue. Change **Recontact Options** to see your survey multiple times during testing.
+    </Warning>
+
+    **Audience Targeting**
+    - Target specific users based on attributes (e.g., plan type, location)
+    - Filter by user actions (e.g., visited pricing page 3+ times)
+    - Leave empty to show to everyone
+  </Step>
+
+  <Step title="Style Your Survey">
+    Click the **Styling** tab to customize your survey's appearance:
+
+    - **Survey Type**: Choose card, form, or full-screen layout
+    - **Brand Color**: Set your primary color
+    - **Background**: Solid color, gradient, or custom image
+    - **Question Layout**: Single question per page or multiple
+    - **Progress Bar**: Show completion progress
+    - **Formbricks Branding**: Remove branding on paid plans
+
+    <Tip>
+      Use your brand colors to increase trust and completion rates. Users are more likely to complete surveys that feel native to your product.
+    </Tip>
+  </Step>
+
+  <Step title="Publish Your Survey">
+    Once you're happy with your survey, click the **Publish** button in the top-right corner.
+
+    Your survey is now live! You'll be redirected to the **Survey Summary** page where responses will appear in real-time.
+
+    <Note>
+      **For in-product surveys**: Changes can take up to 1 minute to appear in your app due to caching. Enable [Debug Mode](/xm-and-surveys/surveys/website-app-surveys/framework-guides#activate-debug-mode) to troubleshoot.
+    </Note>
+  </Step>
+
+  <Step title="Share Your Survey & Collect Responses">
+    ### For Link Surveys
+
+    Copy the survey link from the Summary page and share it via:
+    - Email campaigns
+    - Social media posts
+    - In-app notifications
+    - QR codes for physical locations
+    - SMS messages
+
+    The link looks like: `https://app.formbricks.com/s/your-survey-slug`
+
+    ### For In-Product Surveys
+
+    Your survey will automatically appear to users when the trigger conditions are met (e.g., when they view a page or click a button).
+
+    **Testing your in-product survey:**
+    1. Open your app in a browser
+    2. Open the browser console (F12)
+    3. Look for Formbricks debug messages (if debug mode is enabled)
+    4. Perform the trigger action (e.g., load a page)
+    5. The survey should appear
+
+    <Warning>
+      **Survey not showing?** Common issues:
+      - Recontact settings are too restrictive (see Step 5)
+      - You already responded to the survey (clear cookies or use incognito)
+      - Trigger action hasn't been performed
+      - Audience targeting excludes you
+      - SDK not properly initialized
+    </Warning>
+  </Step>
+
+  <Step title="View and Analyze Responses">
+    As responses come in, you'll see them on the **Survey Summary** page:
+
+    **Summary Tab**
+    - Response count and completion rate
+    - Question-by-question breakdown
+    - Charts and visualizations
+    - Response timeline
+
+    **Responses Tab**
+    - Individual response details
+    - Filter and segment responses
+    - Tag responses for organization
+    - Export to CSV or connect to external tools
+
+    **Insights Tab** (if enabled)
+    - AI-powered response analysis
+    - Sentiment detection
+    - Common themes and patterns
+
+    <Tip>
+      Set up **webhooks** to send response data to Slack, Notion, or your CRM in real-time. Go to Settings → Integrations to connect your tools.
+    </Tip>
+  </Step>
+</Steps>
+
+---
+
+## What's Next?
+
+Congratulations! You've created and published your first Formbricks survey. Here's what to explore next:
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Understand Core Concepts" icon="book-open" href="/concepts/surveys">
+    Deep dive into surveys, environments, contacts, and responses
+  </Card>
+  <Card title="Set Up Integrations" icon="plug" href="/integrations">
+    Connect Formbricks to Slack, Zapier, Notion, and more
+  </Card>
+  <Card title="Explore Advanced Features" icon="wand-magic-sparkles" href="/features">
+    Logic jumps, quotas, multi-language surveys, and more
+  </Card>
+  <Card title="Browse API Docs" icon="code" href="/api-reference">
+    Programmatically create surveys and fetch responses
+  </Card>
 </CardGroup>
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  **Need help?** Join our [GitHub Discussions](https://github.com/formbricks/formbricks/discussions) or [Discord community](https://discord.gg/formbricks) for support from the team and other users.
 </Note>

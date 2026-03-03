@@ -1,0 +1,387 @@
+---
+title: System Architecture
+description: Understand the Formbricks system architecture and monorepo structure
+icon: sitemap
+---
+
+Formbricks is built as a modern monorepo using pnpm workspaces and Turborepo for efficient development and builds.
+
+## Monorepo Structure
+
+The repository is organized into two main directories:
+
+```
+formbricks/
+├── apps/           # Application projects
+│   ├── web/        # Main Next.js application
+│   └── storybook/  # UI component documentation
+├── packages/       # Shared libraries and tools
+│   ├── database/   # Prisma schema and migrations
+│   ├── surveys/    # Survey runtime package
+│   ├── survey-ui/  # Survey UI components
+│   ├── js-core/    # JavaScript SDK core
+│   ├── types/      # Shared TypeScript types
+│   ├── email/      # Email templates and utilities
+│   ├── storage/    # File storage abstraction
+│   ├── cache/      # Caching utilities
+│   ├── logger/     # Logging utilities
+│   └── config-*/   # Shared configurations
+└── docker/         # Docker configurations
+```
+
+## Application Layer
+
+### Web Application (`apps/web`)
+
+The main Next.js 16 application using the App Router architecture.
+
+#### Directory Structure
+
+```
+apps/web/
+├── app/                    # Next.js App Router
+│   ├── (app)/             # Main authenticated app routes
+│   ├── (auth)/            # Authentication routes
+│   ├── api/               # API routes and endpoints
+│   └── lib/               # App-specific utilities
+├── modules/               # Feature modules
+│   ├── auth/              # Authentication module
+│   ├── survey/            # Survey management
+│   ├── organization/      # Organization management
+│   ├── environments/      # Environment management
+│   ├── integrations/      # Third-party integrations
+│   ├── ee/                # Enterprise Edition features
+│   └── ui/                # UI components
+├── lib/                   # Services and utilities
+├── public/                # Static assets
+├── locales/               # i18n translations
+└── playwright/            # E2E tests
+```
+
+#### Key Concepts
+
+**Route Groups**: The app uses Next.js route groups:
+- `(app)` - Main application with authenticated routes
+- `(auth)` - Authentication flows (login, signup)
+- `(redirects)` - URL redirects and legacy routes
+
+**Modules**: Feature-based organization:
+- Each module contains its related components, services, and types
+- `modules/ee/` contains Enterprise Edition features
+- Services are located in `lib/` for cross-cutting concerns
+
+**Server Actions**: Data mutations use Next.js Server Actions:
+- Actions return `{ data }` or `{ error }` consistently
+- Located alongside features they support
+- Type-safe with Zod validation
+
+### Storybook (`apps/storybook`)
+
+Component documentation and visual testing using Storybook.
+
+## Package Layer
+
+### Database (`packages/database`)
+
+Prisma-based database layer with PostgreSQL.
+
+**Key Files:**
+- `schema.prisma` - Database schema definition
+- `migrations/` - Prisma migration files
+- `src/seed.ts` - Database seeding utilities
+- `zod/` - Zod schemas generated from Prisma
+
+**Scripts:**
+```bash
+pnpm db:migrate:dev    # Apply migrations (dev)
+pnpm db:migrate:deploy # Apply migrations (prod)
+pnpm db:push           # Push schema without migration
+pnpm db:seed           # Seed database
+```
+
+**Architecture Notes:**
+- Multi-tenancy: All data scoped by Organization or Environment
+- Soft deletion: Uses `isActive` and `deletedAt` fields
+- pgvector extension for vector operations
+
+### Surveys (`packages/surveys`)
+
+The survey runtime package compiled to UMD and ESM.
+
+**Build Process:**
+1. Compiled with Vite to `dist/`
+2. Bundle copied to `apps/web/public/js/`
+3. Next.js imports from `dist/`, not source
+
+**Dependencies:**
+- `packages/survey-ui` - UI components
+- `packages/types` - Type definitions
+- `packages/i18n-utils` - Internationalization
+
+<Warning>
+After changing survey packages, you must rebuild with `--force` and hard refresh the browser.
+</Warning>
+
+### Survey UI (`packages/survey-ui`)
+
+React components for rendering surveys.
+
+- Shared between web app and surveys package
+- Uses TailwindCSS for styling
+- Supports multiple question types
+
+### Types (`packages/types`)
+
+Shared TypeScript types used across the monorepo.
+
+- API types
+- Database types (from Prisma)
+- SDK types
+- Validation schemas (Zod)
+
+### JavaScript Core (`packages/js-core`)
+
+Core JavaScript SDK functionality.
+
+- Survey loading and rendering
+- Event tracking
+- API communication
+- Browser and Node.js compatible
+
+### Email (`packages/email`)
+
+Email templates and sending utilities.
+
+- React Email templates
+- Nodemailer integration
+- Multi-provider support (SMTP, Brevo)
+
+### Storage (`packages/storage`)
+
+File storage abstraction layer.
+
+- S3-compatible storage (AWS S3, MinIO)
+- Local file system storage
+- Image optimization with Sharp
+
+### Cache (`packages/cache`)
+
+Caching utilities and abstractions.
+
+- Redis/Valkey integration
+- Request-level caching with React `cache()`
+- Cache key utilities
+
+### Configuration Packages
+
+- `config-typescript` - Shared TypeScript config
+- `config-eslint` - ESLint configuration
+- `config-prettier` - Prettier configuration
+
+## Technology Stack
+
+### Frontend
+
+- **Next.js 16** - React framework with App Router
+- **React 19** - UI library
+- **TailwindCSS** - Utility-first CSS framework
+- **Radix UI** - Headless UI components
+- **Lucide React** - Icon library
+- **Framer Motion** - Animation library
+- **React Hook Form** - Form management
+- **i18next** - Internationalization
+
+### Backend
+
+- **Next.js API Routes** - RESTful APIs
+- **Prisma** - Database ORM
+- **PostgreSQL** - Primary database with pgvector
+- **Redis (Valkey)** - Caching and session storage
+- **Auth.js (NextAuth)** - Authentication
+- **Zod** - Schema validation
+
+### Infrastructure
+
+- **Docker** - Containerization
+- **Turborepo** - Monorepo build system
+- **pnpm** - Package manager
+- **Vite** - Build tool for packages
+
+### Testing
+
+- **Vitest** - Unit testing framework
+- **Testing Library** - React testing utilities
+- **Playwright** - E2E testing
+
+### Observability
+
+- **Sentry** - Error tracking
+- **OpenTelemetry** - Distributed tracing
+- **Prometheus** - Metrics (optional)
+
+## Build System
+
+### Turborepo Configuration
+
+Turborepo manages the build pipeline with dependency-aware caching.
+
+**Key Features:**
+- Parallel execution of independent tasks
+- Incremental builds with caching
+- Dependency graph awareness
+- Remote caching support
+
+**Common Tasks:**
+
+```bash
+pnpm build                 # Build all packages
+pnpm build --force         # Force rebuild (bypass cache)
+pnpm dev                   # Run all dev servers
+pnpm lint                  # Lint all packages
+pnpm test                  # Run all tests
+```
+
+### Build Dependencies
+
+The build system enforces correct build order:
+
+```
+logger → database → types → survey-ui → surveys → web
+       → cache                                    → web
+       → storage                                  → web
+```
+
+## Data Flow
+
+### Request Lifecycle
+
+1. **Client Request** → Next.js App Router
+2. **Middleware** → Authentication, routing
+3. **Route Handler / Page** → Data fetching
+4. **Server Actions** → Data mutations
+5. **Services** → Business logic
+6. **Prisma** → Database operations
+7. **Response** → JSON or React components
+
+### Caching Strategy
+
+**Levels of Caching:**
+
+1. **React Cache** - Request-level deduplication
+   ```typescript
+   import { cache } from "react";
+   const getData = cache(async () => { ... });
+   ```
+
+2. **Redis Cache** - Application-level caching
+   ```typescript
+   import { cache } from "@formbricks/cache";
+   await cache.set(key, value, ttl);
+   ```
+
+3. **Next.js Cache** - Not used (avoid `unstable_cache`)
+
+4. **CDN Cache** - Static assets and API routes
+
+<Warning>
+Do not use Next.js `unstable_cache()`. Use React `cache()` or explicit Redis caching.
+</Warning>
+
+## Multi-Tenancy
+
+Formbricks implements multi-tenancy at the data layer:
+
+**Hierarchy:**
+```
+User → Organization → Environment → Survey → Response
+```
+
+**Access Control:**
+- All queries scoped by Organization or Environment ID
+- Row-level security through Prisma where clauses
+- Role-based access control (Owner, Admin, Member)
+
+## Internationalization (i18n)
+
+Formbricks supports multiple languages:
+
+**Structure:**
+- Translations in `apps/web/locales/`
+- Default locale: `en-US`
+- Automatic translation via Lingo.dev
+
+**Usage:**
+```typescript
+import { useTranslation } from "react-i18next";
+const { t } = useTranslation();
+
+return <h1>{t("common.welcome")}</h1>;
+```
+
+**Commands:**
+```bash
+pnpm i18n                 # Generate and scan translations
+pnpm i18n:validate        # Validate translation keys
+```
+
+## Security
+
+### Authentication
+
+- **NextAuth.js** for authentication
+- **Supports**: Email/Password, OAuth (Google, GitHub, Azure AD), SAML SSO
+- **Session**: JWT-based sessions
+- **2FA**: TOTP-based two-factor authentication
+
+### Authorization
+
+- Role-based access control (RBAC)
+- Organization-level permissions
+- Environment-level isolation
+
+### Data Security
+
+- Password hashing with bcrypt
+- Encryption key for sensitive data
+- HTTPS/TLS in production
+- CSRF protection
+- Rate limiting
+
+## Performance Considerations
+
+### Database
+
+- **Never use `skip`/`offset` with count queries**
+- Use cursor-based pagination for large datasets
+- Separate count and data queries (run in parallel)
+- Include indexed fields when filtering by `createdAt`
+
+### Frontend
+
+- Server Components by default
+- Client Components only when needed
+- Image optimization with next/image
+- Code splitting and lazy loading
+
+### Caching
+
+- Redis for expensive operations
+- React cache for request deduplication
+- CDN for static assets
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Local Setup" icon="laptop-code" href="/development/local-setup">
+    Set up your development environment
+  </Card>
+  <Card title="Code Style" icon="code" href="/development/standards/code-style">
+    Learn our coding standards
+  </Card>
+  <Card title="Testing" icon="flask" href="/development/standards/testing">
+    Write tests for your code
+  </Card>
+  <Card title="Contributing" icon="book" href="/development/contributing">
+    Read contribution guidelines
+  </Card>
+</CardGroup>

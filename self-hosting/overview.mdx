@@ -1,0 +1,207 @@
+---
+title: Self-Hosting Overview
+description: Learn how to self-host Formbricks on your own infrastructure
+icon: server
+---
+
+Formbricks can be self-hosted on your own infrastructure, giving you complete control over your data and deployment. This guide provides an overview of the available deployment options and requirements.
+
+## Why Self-Host?
+
+Self-hosting Formbricks offers several advantages:
+
+- **Data Sovereignty**: Keep all survey data within your infrastructure
+- **Customization**: Full control over configuration and customization
+- **Compliance**: Meet specific regulatory or compliance requirements
+- **Cost Control**: Optimize costs for high-volume usage
+- **Network Isolation**: Run Formbricks within your private network
+
+## Deployment Options
+
+Formbricks supports multiple deployment methods to fit your infrastructure:
+
+<CardGroup cols={2}>
+  <Card title="Docker Compose" icon="docker" href="/self-hosting/docker">
+    Deploy with Docker and Docker Compose - ideal for single-server deployments
+  </Card>
+  <Card title="Kubernetes" icon="dharmachakra" href="/self-hosting/kubernetes">
+    Enterprise-grade deployment using Helm charts with auto-scaling
+  </Card>
+  <Card title="Railway" icon="train" href="/self-hosting/railway">
+    One-click deployment on Railway's managed platform
+  </Card>
+</CardGroup>
+
+## System Requirements
+
+### Minimum Requirements
+
+- **CPU**: 2 cores
+- **RAM**: 4GB
+- **Storage**: 20GB SSD
+- **OS**: Linux (Ubuntu 20.04+ recommended)
+
+### Recommended for Production
+
+- **CPU**: 4+ cores
+- **RAM**: 8GB+
+- **Storage**: 50GB+ SSD
+- **Database**: PostgreSQL 17 with pgvector extension
+- **Cache**: Redis/Valkey for optimal performance
+
+## Required Services
+
+Formbricks requires the following services:
+
+### PostgreSQL Database
+
+Formbricks uses PostgreSQL with the pgvector extension for storing survey data and responses.
+
+- **Version**: PostgreSQL 17 recommended
+- **Extension**: pgvector for AI features
+- **Schema**: Managed automatically via Prisma migrations
+
+### Redis/Valkey Cache
+
+Used for caching, rate limiting, and audit logging.
+
+- **Version**: Redis 6+ or Valkey (Redis fork)
+- **Persistence**: AOF (Append-Only File) recommended
+- **Use Cases**: Session storage, rate limiting, cache
+
+## Core Configuration
+
+All deployment methods require the following essential configuration:
+
+### Required Environment Variables
+
+```bash
+# Application URL
+WEBAPP_URL=https://formbricks.example.com
+NEXTAUTH_URL=https://formbricks.example.com
+
+# Database Connection
+DATABASE_URL=postgresql://user:password@host:5432/formbricks?schema=public
+
+# Redis Cache
+REDIS_URL=redis://redis:6379
+
+# Security Keys (generate with: openssl rand -hex 32)
+NEXTAUTH_SECRET=<your-secret-key>
+ENCRYPTION_KEY=<your-encryption-key>
+CRON_SECRET=<your-cron-secret>
+```
+
+### Optional Features
+
+<AccordionGroup>
+  <Accordion title="Email Configuration">
+    Configure SMTP for email verification and password reset:
+
+    ```bash
+    MAIL_FROM=noreply@example.com
+    MAIL_FROM_NAME=Formbricks
+    SMTP_HOST=smtp.example.com
+    SMTP_PORT=587
+    SMTP_USER=your-smtp-user
+    SMTP_PASSWORD=your-smtp-password
+    SMTP_SECURE_ENABLED=1
+    ```
+  </Accordion>
+
+  <Accordion title="File Storage (S3)">
+    Required for file uploads in serverless environments:
+
+    ```bash
+    S3_ACCESS_KEY=your-access-key
+    S3_SECRET_KEY=your-secret-key
+    S3_REGION=us-east-1
+    S3_BUCKET_NAME=formbricks-uploads
+    S3_ENDPOINT_URL=  # For S3-compatible services
+    ```
+  </Accordion>
+
+  <Accordion title="OAuth Providers">
+    Enable single sign-on with OAuth providers:
+
+    ```bash
+    # GitHub OAuth
+    GITHUB_ID=your-github-client-id
+    GITHUB_SECRET=your-github-client-secret
+
+    # Google OAuth
+    GOOGLE_CLIENT_ID=your-google-client-id
+    GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+    # Azure AD
+    AZUREAD_CLIENT_ID=your-azure-client-id
+    AZUREAD_CLIENT_SECRET=your-azure-client-secret
+    AZUREAD_TENANT_ID=your-tenant-id
+    ```
+  </Accordion>
+
+  <Accordion title="Enterprise Features">
+    Unlock Enterprise features with a license key:
+
+    ```bash
+    ENTERPRISE_LICENSE_KEY=your-license-key
+    ```
+
+    [Learn more about Enterprise features](https://formbricks.com/docs/self-hosting/license)
+  </Accordion>
+</AccordionGroup>
+
+## Security Considerations
+
+<Warning>
+  Always use strong, randomly generated secrets for production deployments. Never commit secrets to version control.
+</Warning>
+
+### Generate Secure Keys
+
+Use OpenSSL to generate cryptographically secure keys:
+
+```bash
+openssl rand -hex 32
+```
+
+You'll need to generate three separate keys for:
+- `NEXTAUTH_SECRET`
+- `ENCRYPTION_KEY`
+- `CRON_SECRET`
+
+### SSL/TLS Certificates
+
+Always use HTTPS in production:
+
+- Use a reverse proxy (Traefik, Nginx, Caddy) with automatic SSL
+- Configure SSL certificates via Let's Encrypt
+- Ensure proper certificate renewal automation
+
+### Network Security
+
+- Restrict database access to application servers only
+- Use firewalls to limit exposed ports
+- Enable rate limiting to prevent abuse
+- Consider using a VPN for internal access
+
+## Next Steps
+
+Choose your deployment method:
+
+<CardGroup cols={2}>
+  <Card title="Quick Start with Docker" icon="rocket" href="/self-hosting/docker">
+    Get started in minutes with Docker Compose
+  </Card>
+  <Card title="Production on Kubernetes" icon="dharmachakra" href="/self-hosting/kubernetes">
+    Deploy a scalable production instance
+  </Card>
+</CardGroup>
+
+## Getting Help
+
+If you encounter issues during deployment:
+
+- Check the [GitHub Issues](https://github.com/formbricks/formbricks/issues)
+- Join the [Formbricks Discord Community](https://formbricks.com/discord)
+- Review the [troubleshooting guide](https://formbricks.com/docs/self-hosting/troubleshooting)

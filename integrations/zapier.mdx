@@ -1,0 +1,242 @@
+---
+title: Zapier Integration
+description: Connect Formbricks to 5000+ apps using Zapier's powerful automation platform.
+---
+
+The Zapier integration enables you to connect Formbricks with thousands of applications, automating workflows based on survey responses. Send data to CRMs, email marketing tools, databases, and more.
+
+## How It Works
+
+Zapier uses webhooks to receive survey responses from Formbricks in real-time. You can then:
+
+- Trigger actions in other apps when responses arrive
+- Filter and transform response data
+- Create multi-step automation workflows
+- Connect to 5000+ supported applications
+
+## Before You Start
+
+<Warning>
+  Set up your survey completely before creating the Zap. Changes to your survey after Zap creation require updating the Zap configuration.
+</Warning>
+
+<Steps>
+  <Step title="Customize Question IDs">
+    Before publishing your survey, update the `questionId` for each question to make them recognizable in Zapier.
+    
+    ![Update Question ID](/images/xm-and-surveys/core-features/integrations/zapier/update-question-id.webp)
+    
+    <Note>
+      Question IDs can only be changed before publishing. If your survey is already published, duplicate it to update IDs.
+      
+      ![Duplicate Survey](/images/xm-and-surveys/core-features/integrations/zapier/duplicate-survey.webp)
+    </Note>
+  </Step>
+
+  <Step title="Submit Test Response">
+    Zapier needs a sample response to set up field mapping. Submit at least one test response to your survey.
+    
+    ![Submit Test Response](/images/xm-and-surveys/core-features/integrations/zapier/submit-test-response.webp)
+  </Step>
+</Steps>
+
+## Setup Your Zap
+
+<Steps>
+  <Step title="Create New Zap">
+    Go to [zapier.com](https://zapier.com) and create a new Zap. Search for "Formbricks" and select it as the trigger app.
+    
+    ![Add New Zap](/images/xm-and-surveys/core-features/integrations/zapier/add-new-zap.webp)
+  </Step>
+
+  <Step title="Choose Trigger Event">
+    Select which event should trigger the Zap:
+    - **Response Created**: Triggered when a response starts
+    - **Response Updated**: Triggered when a response is modified
+    - **Response Finished**: Triggered when a response is completed
+    
+    ![Choose Event](/images/xm-and-surveys/core-features/integrations/zapier/choose-event.webp)
+  </Step>
+
+  <Step title="Connect Formbricks Account">
+    Click to connect your Formbricks account. You'll need:
+    - Your Formbricks environment URL (e.g., `https://app.formbricks.com`)
+    - A Formbricks API key
+    
+    ![Connect with Formbricks](/images/xm-and-surveys/core-features/integrations/zapier/connect-with-formbricks-1.webp)
+  </Step>
+
+  <Step title="Generate API Key">
+    In Formbricks:
+    1. Go to **Configuration** > **API Keys**
+    2. Click **Create API Key**
+    3. Copy the key and paste it into Zapier
+    
+    <Note>
+      See [API Key Setup](/api-reference/rest-api#how-to-generate-an-api-key) for detailed instructions.
+    </Note>
+    
+    ![API Key Connected](/images/xm-and-surveys/core-features/integrations/zapier/success-connected.webp)
+  </Step>
+
+  <Step title="Select Survey">
+    Choose which survey's responses should trigger this Zap.
+    
+    ![Select Survey](/images/xm-and-surveys/core-features/integrations/zapier/select-survey.webp)
+  </Step>
+
+  <Step title="Test Trigger">
+    Click **Test** to fetch recent responses. Zapier will show the 3 most recent submissions. Select one to use as sample data.
+    
+    ![Test Submission](/images/xm-and-surveys/core-features/integrations/zapier/test-submission.webp)
+    
+    <Note>
+      This is where custom question IDs make setup easier - you'll see meaningful field names instead of generic IDs.
+    </Note>
+  </Step>
+
+  <Step title="Configure Action">
+    Add an action step to define what happens with the response data. For example, to send to Slack:
+    
+    1. Search for and select Slack
+    2. Choose "Send Channel Message"
+    3. Select your channel
+    4. Map Formbricks fields to message content
+    
+    ![Slack Channel Message](/images/xm-and-surveys/core-features/integrations/zapier/slack-channel-msg.webp)
+  </Step>
+
+  <Step title="Map Response Fields">
+    Use the response data from the test to populate your action. You can access:
+    - Individual question responses (by question ID)
+    - Response metadata (timestamp, device, country)
+    - Contact attributes (if user identification is enabled)
+    - Custom variables
+    
+    ![Slack Message](/images/xm-and-surveys/core-features/integrations/zapier/slack-message.webp)
+  </Step>
+
+  <Step title="Test and Activate">
+    Test your complete Zap, then turn it on. New responses will now trigger your automation!
+    
+    ![Zapier Message Result](/images/xm-and-surveys/core-features/integrations/zapier/zapier-message.webp)
+  </Step>
+</Steps>
+
+## Available Trigger Data
+
+When a response triggers your Zap, Zapier receives the following data:
+
+```json
+{
+  "event": "responseFinished",
+  "data": {
+    "id": "response_id",
+    "surveyId": "survey_id",
+    "finished": true,
+    "data": {
+      "satisfaction": "Very satisfied",
+      "feedback": "Great product!"
+    },
+    "meta": {
+      "userAgent": {
+        "browser": "Chrome",
+        "device": "desktop",
+        "os": "macOS"
+      },
+      "country": "US",
+      "url": "https://example.com"
+    },
+    "contactAttributes": {
+      "email": "user@example.com",
+      "userId": "user_123"
+    },
+    "createdAt": "2024-03-15T10:30:00.000Z",
+    "updatedAt": "2024-03-15T10:32:00.000Z"
+  }
+}
+```
+
+## Common Use Cases
+
+<CardGroup cols={2}>
+  <Card title="CRM Updates" icon="users">
+    Update or create contacts in HubSpot, Salesforce, or other CRMs based on survey responses
+  </Card>
+  
+  <Card title="Slack Notifications" icon="slack">
+    Send formatted messages to Slack channels when important feedback arrives
+  </Card>
+  
+  <Card title="Email Automation" icon="envelope">
+    Trigger personalized emails in Mailchimp, SendGrid, or Gmail based on survey answers
+  </Card>
+  
+  <Card title="Database Storage" icon="database">
+    Store responses in Airtable, Google Sheets, or a custom database
+  </Card>
+</CardGroup>
+
+## Webhook Implementation
+
+Under the hood, the Zapier integration uses Formbricks webhooks:
+
+1. When you set up a Zap, Zapier registers a webhook with Formbricks
+2. Formbricks sends POST requests to Zapier's webhook URL when configured events occur
+3. Zapier processes the payload and triggers your Zap's actions
+
+The webhook payload follows the same format as [Formbricks webhooks](/integrations/webhooks), ensuring consistency across integrations.
+
+## Filtering Responses
+
+Use Zapier's built-in filters to create conditional logic:
+
+```
+Only continue if:
+  data__nps_score (Number) Greater than 8
+```
+
+This allows you to:
+- Send alerts only for negative feedback
+- Route different response types to different destinations
+- Skip incomplete responses
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Test finds no responses">
+    Ensure you've submitted at least one response to the selected survey. The test looks for the 3 most recent responses.
+  </Accordion>
+
+  <Accordion title="Question IDs are unclear">
+    If you see generic IDs like `q1`, `q2`, duplicate your survey and update the question IDs before publishing, then reconnect your Zap.
+  </Accordion>
+
+  <Accordion title="Zap not triggering">
+    - Verify the Zap is turned ON
+    - Check that you're submitting responses to the correct survey
+    - Ensure the trigger event matches (e.g., responseFinished vs responseCreated)
+    - Check Zapier's task history for error messages
+  </Accordion>
+
+  <Accordion title="Missing data fields">
+    If expected fields are missing, ensure:
+    - Contact attributes are enabled for your survey
+    - Custom variables are properly set
+    - The test response includes all the questions you need
+  </Accordion>
+</AccordionGroup>
+
+## Advanced: Multi-Step Zaps
+
+Create sophisticated workflows by chaining multiple actions:
+
+1. **Trigger**: Response Finished (Formbricks)
+2. **Filter**: NPS score < 6
+3. **Action**: Create ticket (Zendesk)
+4. **Action**: Send email (Gmail)
+5. **Action**: Post to channel (Slack)
+
+This allows you to build complex automation without writing code.
+
+Need help? [Join our GitHub Discussions](https://github.com/formbricks/formbricks/discussions)!

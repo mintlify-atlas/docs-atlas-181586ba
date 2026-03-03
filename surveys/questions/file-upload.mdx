@@ -1,0 +1,319 @@
+---
+title: File Upload
+description: Allow respondents to upload files, images, or documents as part of their response
+---
+
+The File Upload question type enables respondents to upload files such as images, documents, videos, or other file types as part of their survey response.
+
+## Configuration
+
+### Basic Properties
+
+```typescript
+type TSurveyFileUploadElement = {
+  id: string;                    // Unique identifier
+  type: "fileUpload";            // Question type
+  headline: TI18nString;         // Main question text (required)
+  subheader?: TI18nString;       // Optional descriptive text
+  required: boolean;             // Whether response is mandatory
+  allowMultipleFiles: boolean;   // Allow uploading multiple files
+  maxSizeInMB?: number;          // Maximum file size in megabytes
+  allowedFileExtensions?: string[]; // Restrict file types
+  validation?: TValidation;      // Advanced validation rules
+  imageUrl?: string;             // Optional image URL
+  videoUrl?: string;             // Optional video URL
+  isDraft?: boolean;             // Mark as draft
+};
+```
+
+### File Constraints
+
+#### Size Limits
+
+Control the maximum file size:
+
+```typescript
+maxSizeInMB: 10  // Limit to 10 MB per file
+```
+
+#### File Type Restrictions
+
+Restrict allowed file extensions:
+
+```typescript
+allowedFileExtensions: [".jpg", ".png", ".pdf", ".docx"]
+```
+
+**Common file extension groups:**
+
+- **Images**: `[".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"]`
+- **Documents**: `[".pdf", ".doc", ".docx", ".txt", ".rtf"]`
+- **Spreadsheets**: `[".xls", ".xlsx", ".csv"]`
+- **Videos**: `[".mp4", ".mov", ".avi", ".wmv"]`
+- **Archives**: `[".zip", ".rar", ".7z"]`
+
+**Note:** At least one file extension must be specified when using `allowedFileExtensions`.
+
+### Multiple Files
+
+Allow respondents to upload multiple files:
+
+```typescript
+allowMultipleFiles: true
+```
+
+### Validation Rules
+
+File Upload supports these validation rules:
+
+```typescript
+validation: {
+  logic: "and" | "or",
+  rules: [
+    {
+      id: "extension_check",
+      type: "fileExtensionIs",
+      params: { extensions: [".jpg", ".png"] }
+    },
+    {
+      id: "not_executable",
+      type: "fileExtensionIsNot",
+      params: { extensions: [".exe", ".bat"] }
+    }
+  ]
+}
+```
+
+**Available validation types:**
+- `fileExtensionIs`: File must have one of the specified extensions
+- `fileExtensionIsNot`: File must NOT have any of the specified extensions
+
+**Note:** File size validation happens client-side via `maxSizeInMB`. Response validation only has access to file URLs, not file metadata.
+
+## Use Cases
+
+### Screenshot Upload
+
+Collect screenshots for bug reports:
+
+```typescript
+{
+  id: "bug_screenshot",
+  type: "fileUpload",
+  headline: { default: "Please upload a screenshot of the issue" },
+  subheader: { default: "This helps us understand and fix the problem faster" },
+  required: false,
+  allowMultipleFiles: true,
+  maxSizeInMB: 5,
+  allowedFileExtensions: [".jpg", ".jpeg", ".png", ".gif"]
+}
+```
+
+### Document Submission
+
+Collect supporting documents:
+
+```typescript
+{
+  id: "support_docs",
+  type: "fileUpload",
+  headline: { default: "Upload relevant documentation" },
+  subheader: { default: "Accepted formats: PDF, Word, or Excel" },
+  required: true,
+  allowMultipleFiles: true,
+  maxSizeInMB: 20,
+  allowedFileExtensions: [".pdf", ".doc", ".docx", ".xls", ".xlsx"]
+}
+```
+
+### Profile Picture
+
+Single image upload:
+
+```typescript
+{
+  id: "profile_pic",
+  type: "fileUpload",
+  headline: { default: "Upload your profile picture" },
+  required: false,
+  allowMultipleFiles: false,
+  maxSizeInMB: 2,
+  allowedFileExtensions: [".jpg", ".jpeg", ".png"]
+}
+```
+
+### Resume Upload
+
+For job applications:
+
+```typescript
+{
+  id: "resume",
+  type: "fileUpload",
+  headline: { default: "Upload your resume" },
+  subheader: { default: "PDF format preferred" },
+  required: true,
+  allowMultipleFiles: false,
+  maxSizeInMB: 10,
+  allowedFileExtensions: [".pdf", ".doc", ".docx"]
+}
+```
+
+### Design Portfolio
+
+Multiple image uploads:
+
+```typescript
+{
+  id: "portfolio",
+  type: "fileUpload",
+  headline: { default: "Share examples of your work" },
+  subheader: { default: "Upload up to 10 images" },
+  required: false,
+  allowMultipleFiles: true,
+  maxSizeInMB: 5,
+  allowedFileExtensions: [".jpg", ".jpeg", ".png", ".pdf"]
+}
+```
+
+### Video Testimonial
+
+Collect video uploads:
+
+```typescript
+{
+  id: "video_testimonial",
+  type: "fileUpload",
+  headline: { default: "Record a video testimonial" },
+  subheader: { default: "Maximum 100 MB, MP4 or MOV format" },
+  required: false,
+  allowMultipleFiles: false,
+  maxSizeInMB: 100,
+  allowedFileExtensions: [".mp4", ".mov"]
+}
+```
+
+### Receipt Upload
+
+Proof of purchase:
+
+```typescript
+{
+  id: "receipt",
+  type: "fileUpload",
+  headline: { default: "Upload your receipt" },
+  subheader: { default: "Photo or PDF of your purchase receipt" },
+  required: true,
+  allowMultipleFiles: false,
+  maxSizeInMB: 5,
+  allowedFileExtensions: [".jpg", ".jpeg", ".png", ".pdf"]
+}
+```
+
+## Best Practices
+
+1. **Set appropriate size limits**: Balance file quality with upload time and storage costs
+   - Images: 2-5 MB is usually sufficient
+   - Documents: 10-20 MB for most cases
+   - Videos: 50-100 MB or more
+
+2. **Restrict file types**: Always specify `allowedFileExtensions` to prevent unwanted file types
+
+3. **Provide clear instructions**: Use `subheader` to explain:
+   - What to upload
+   - File format requirements
+   - Size limits
+   - How many files are allowed
+
+4. **Consider mobile users**: Large files may be difficult to upload on mobile connections
+
+5. **Make optional when possible**: File uploads can be friction points; only require when necessary
+
+6. **Use validation rules**: Add `fileExtensionIs` and `fileExtensionIsNot` for extra security
+
+7. **Avoid security risks**: Never allow executable file types (`.exe`, `.bat`, `.sh`, `.app`)
+
+8. **Test upload flow**: Ensure uploads work smoothly in your target environments
+
+## Security Considerations
+
+### Blocked File Types
+
+Always exclude potentially dangerous file types:
+
+```typescript
+validation: {
+  logic: "and",
+  rules: [
+    {
+      id: "no_executables",
+      type: "fileExtensionIsNot",
+      params: {
+        extensions: [
+          ".exe", ".bat", ".cmd", ".sh",
+          ".app", ".deb", ".rpm", ".dmg",
+          ".msi", ".jar"
+        ]
+      }
+    }
+  ]
+}
+```
+
+### File Type Allowlist
+
+Use an allowlist approach (safer than blocklist):
+
+```typescript
+// GOOD: Only allow specific types
+allowedFileExtensions: [".jpg", ".png", ".pdf"]
+
+// AVOID: Blocking specific types leaves gaps
+// Better to explicitly allow only what you need
+```
+
+### Size Limits
+
+Set reasonable limits to prevent abuse:
+
+```typescript
+// Prevent extremely large uploads
+maxSizeInMB: 50  // Adjust based on your needs
+```
+
+## Storage
+
+Formbricks handles file storage automatically. Uploaded files are:
+1. Validated against your constraints
+2. Stored securely
+3. Accessible via URLs in response data
+4. Subject to your storage provider's policies
+
+## Response Data Format
+
+File upload responses contain file URLs:
+
+```json
+{
+  "file_question_id": [
+    "https://storage.example.com/uploads/file1.jpg",
+    "https://storage.example.com/uploads/file2.jpg"
+  ]
+}
+```
+
+For single file uploads with `allowMultipleFiles: false`, the response is a single URL string instead of an array.
+
+## Accessibility
+
+- File input is keyboard accessible (Tab + Enter)
+- Screen readers announce file upload requirements
+- Drag-and-drop and click-to-browse both supported
+- File size and type constraints are announced
+- Upload progress is communicated to screen readers
+- Error messages are clearly announced
+
+## Related Question Types
+
+- [Open Text](/surveys/questions/open-text) - For text-based responses
+- [Date](/surveys/questions/date) - For collecting dates

@@ -1,0 +1,318 @@
+---
+title: Email Configuration
+description: Configure email delivery for your self-hosted Formbricks instance
+icon: envelope
+---
+
+## Overview
+
+Formbricks uses email for various features including email verification, password resets, team invitations, and survey notifications. This guide will help you configure SMTP for your self-hosted instance.
+
+## SMTP Configuration
+
+### Required Environment Variables
+
+To enable email functionality, configure the following SMTP variables in your `.env` file:
+
+<ParamField path="MAIL_FROM" type="string" required>
+  The email address that appears as the sender for all outgoing emails.
+  
+  **Example:** `noreply@example.com`
+</ParamField>
+
+<ParamField path="MAIL_FROM_NAME" type="string">
+  The display name shown with the sender email address.
+  
+  **Default:** `Formbricks`
+  
+  **Example:** `My Company Surveys`
+</ParamField>
+
+<ParamField path="SMTP_HOST" type="string" required>
+  The hostname of your SMTP server.
+  
+  **Examples:**
+  - Gmail: `smtp.gmail.com`
+  - SendGrid: `smtp.sendgrid.net`
+  - Mailgun: `smtp.mailgun.org`
+  - Amazon SES: `email-smtp.us-east-1.amazonaws.com`
+  - Local development: `localhost`
+</ParamField>
+
+<ParamField path="SMTP_PORT" type="string" required>
+  The port number for your SMTP server.
+  
+  **Common ports:**
+  - `587` - TLS/STARTTLS (recommended)
+  - `465` - SSL (legacy)
+  - `25` - Unencrypted (not recommended)
+  - `1025` - Local development (e.g., MailHog)
+</ParamField>
+
+<ParamField path="SMTP_USER" type="string" required>
+  Username for SMTP authentication.
+  
+  This is often your full email address or an API key (for services like SendGrid).
+</ParamField>
+
+<ParamField path="SMTP_PASSWORD" type="string" required>
+  Password or API token for SMTP authentication.
+  
+  **Security note:** Never commit this to version control. Use environment variables.
+</ParamField>
+
+### Optional SMTP Settings
+
+<ParamField path="SMTP_SECURE_ENABLED" type="string" default="0">
+  Enable TLS encryption for SMTP connections.
+  
+  Set to `1` when using port `465`. Automatically enabled if `SMTP_PORT` is `465`.
+  
+  **Options:** `0` (disabled), `1` (enabled)
+</ParamField>
+
+<ParamField path="SMTP_AUTHENTICATED" type="string" default="1">
+  Require authentication for SMTP connection.
+  
+  Set to `0` if your SMTP server doesn't require credentials (not recommended for production).
+  
+  **Options:** `0` (no auth required), `1` (auth required)
+</ParamField>
+
+<ParamField path="SMTP_REJECT_UNAUTHORIZED_TLS" type="string" default="1">
+  Verify TLS certificates when connecting to SMTP server.
+  
+  Set to `0` to accept self-signed certificates (useful for development).
+  
+  **Options:** `0` (accept invalid certs), `1` (reject invalid certs)
+</ParamField>
+
+## Email Feature Flags
+
+Control which email-based features are enabled:
+
+<ParamField path="EMAIL_VERIFICATION_DISABLED" type="string" default="1">
+  Disable email verification for new user signups.
+  
+  **Note:** Email verification requires SMTP to be configured.
+  
+  **Options:**
+  - `1` (disabled) - Users can sign up without verifying their email
+  - `0` (enabled) - Users must verify their email before accessing Formbricks
+</ParamField>
+
+<ParamField path="PASSWORD_RESET_DISABLED" type="string" default="1">
+  Disable password reset functionality.
+  
+  **Note:** Password reset requires SMTP to be configured.
+  
+  **Options:**
+  - `1` (disabled) - Users cannot reset passwords via email
+  - `0` (enabled) - Users can request password reset links
+</ParamField>
+
+<ParamField path="EMAIL_AUTH_DISABLED" type="string" default="0">
+  Disable email/password authentication entirely.
+  
+  **Options:**
+  - `0` (enabled) - Users can sign in with email and password
+  - `1` (disabled) - Only OAuth/SSO authentication available
+</ParamField>
+
+<ParamField path="INVITE_DISABLED" type="string" default="0">
+  Disable the ability to invite users to organizations.
+  
+  **Options:**
+  - `0` (enabled) - Users can send organization invites
+  - `1` (disabled) - Organization invites are disabled
+</ParamField>
+
+## Popular SMTP Providers
+
+### Gmail
+
+For Gmail, you'll need to create an [App Password](https://support.google.com/accounts/answer/185833):
+
+```bash
+MAIL_FROM=your-email@gmail.com
+MAIL_FROM_NAME=Formbricks
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+SMTP_SECURE_ENABLED=0
+```
+
+### SendGrid
+
+```bash
+MAIL_FROM=noreply@yourdomain.com
+MAIL_FROM_NAME=Formbricks
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASSWORD=your-sendgrid-api-key
+SMTP_SECURE_ENABLED=0
+```
+
+### Amazon SES
+
+```bash
+MAIL_FROM=noreply@yourdomain.com
+MAIL_FROM_NAME=Formbricks
+SMTP_HOST=email-smtp.us-east-1.amazonaws.com
+SMTP_PORT=587
+SMTP_USER=your-ses-smtp-username
+SMTP_PASSWORD=your-ses-smtp-password
+SMTP_SECURE_ENABLED=0
+```
+
+### Mailgun
+
+```bash
+MAIL_FROM=noreply@yourdomain.com
+MAIL_FROM_NAME=Formbricks
+SMTP_HOST=smtp.mailgun.org
+SMTP_PORT=587
+SMTP_USER=postmaster@yourdomain.com
+SMTP_PASSWORD=your-mailgun-smtp-password
+SMTP_SECURE_ENABLED=0
+```
+
+### Postmark
+
+```bash
+MAIL_FROM=noreply@yourdomain.com
+MAIL_FROM_NAME=Formbricks
+SMTP_HOST=smtp.postmarkapp.com
+SMTP_PORT=587
+SMTP_USER=your-postmark-server-token
+SMTP_PASSWORD=your-postmark-server-token
+SMTP_SECURE_ENABLED=0
+```
+
+### Resend
+
+```bash
+MAIL_FROM=noreply@yourdomain.com
+MAIL_FROM_NAME=Formbricks
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=587
+SMTP_USER=resend
+SMTP_PASSWORD=your-resend-api-key
+SMTP_SECURE_ENABLED=0
+```
+
+## Local Development
+
+For local development and testing, you can use tools like [MailHog](https://github.com/mailhog/MailHog) or [Mailpit](https://github.com/axllent/mailpit):
+
+### MailHog
+
+```bash
+MAIL_FROM=test@example.com
+MAIL_FROM_NAME=Formbricks Dev
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_AUTHENTICATED=0
+```
+
+Run MailHog:
+
+```bash
+docker run -d -p 1025:1025 -p 8025:8025 mailhog/mailhog
+```
+
+View emails at `http://localhost:8025`
+
+### Mailpit
+
+```bash
+MAIL_FROM=test@example.com
+MAIL_FROM_NAME=Formbricks Dev
+SMTP_HOST=localhost
+SMTP_PORT=1025
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_AUTHENTICATED=0
+```
+
+Run Mailpit:
+
+```bash
+docker run -d -p 1025:1025 -p 8025:8025 axllent/mailpit
+```
+
+View emails at `http://localhost:8025`
+
+## Troubleshooting
+
+### Emails Not Sending
+
+1. **Check SMTP credentials**: Verify that your `SMTP_USER` and `SMTP_PASSWORD` are correct
+2. **Verify port**: Ensure you're using the correct port for your provider
+3. **Check firewall**: Make sure outbound connections to SMTP ports are allowed
+4. **Test connection**: Use a tool like `telnet` to test SMTP connectivity:
+   ```bash
+   telnet smtp.example.com 587
+   ```
+
+### Authentication Errors
+
+- Some providers (like Gmail) require app-specific passwords
+- Check if your SMTP provider requires `SMTP_AUTHENTICATED=1`
+- Verify that your credentials haven't expired
+
+### TLS/SSL Errors
+
+- If using self-signed certificates in development, set `SMTP_REJECT_UNAUTHORIZED_TLS=0`
+- For port 465, ensure `SMTP_SECURE_ENABLED=1`
+- For port 587, use `SMTP_SECURE_ENABLED=0` (STARTTLS will be used automatically)
+
+### Rate Limiting
+
+Most email providers have rate limits. If you're sending large volumes:
+
+- Check your provider's rate limits
+- Consider upgrading your email service plan
+- Implement retry logic with exponential backoff
+
+## Email Templates
+
+Formbricks uses customizable email templates for:
+
+- Welcome emails
+- Email verification
+- Password reset
+- Team invitations
+- Survey notifications
+
+### Legal Links in Emails
+
+You can add legal links to email footers:
+
+```bash
+PRIVACY_URL=https://example.com/privacy
+TERMS_URL=https://example.com/terms
+IMPRINT_URL=https://example.com/imprint
+IMPRINT_ADDRESS=Your Company Address
+```
+
+These links will appear in the footer of signup and public pages, as well as in email templates.
+
+## Security Best Practices
+
+1. **Use TLS**: Always use port 587 with STARTTLS or port 465 with SSL in production
+2. **Protect credentials**: Never commit SMTP passwords to version control
+3. **Use app passwords**: For Gmail and similar providers, use app-specific passwords
+4. **Verify certificates**: Keep `SMTP_REJECT_UNAUTHORIZED_TLS=1` in production
+5. **Monitor sending**: Set up alerts for failed email deliveries
+6. **SPF and DKIM**: Configure proper email authentication for your domain
+
+## Next Steps
+
+- [Storage Configuration](/self-hosting/configuration/storage) - Configure file uploads
+- [Authentication Configuration](/self-hosting/configuration/authentication) - Set up SSO and OAuth
+- [Environment Variables Reference](/self-hosting/configuration/environment-variables) - Complete list of all variables

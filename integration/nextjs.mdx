@@ -1,0 +1,539 @@
+---
+title: Next.js SDK
+description: Integrate Formbricks surveys into your Next.js application
+icon: n
+---
+
+The Formbricks JavaScript SDK integrates seamlessly with Next.js applications, supporting both App Router and Pages Router.
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    <CodeGroup>
+      ```bash npm
+      npm install @formbricks/js
+      ```
+
+      ```bash yarn
+      yarn add @formbricks/js
+      ```
+
+      ```bash pnpm
+      pnpm add @formbricks/js
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Configure environment variables">
+    Add your Formbricks configuration to `.env.local`:
+
+    ```bash
+    NEXT_PUBLIC_FORMBRICKS_ENV_ID=your-environment-id
+    NEXT_PUBLIC_FORMBRICKS_URL=https://app.formbricks.com
+    ```
+  </Step>
+</Steps>
+
+## App Router Implementation
+
+### Client Component Approach
+
+Create a client component for Formbricks initialization:
+
+```tsx
+// components/FormbricksProvider.tsx
+'use client';
+
+import { useEffect } from 'react';
+import formbricks from '@formbricks/js';
+
+export function FormbricksProvider() {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      formbricks.setup({
+        environmentId: process.env.NEXT_PUBLIC_FORMBRICKS_ENV_ID!,
+        appUrl: process.env.NEXT_PUBLIC_FORMBRICKS_URL!,
+      });
+    }
+  }, []);
+
+  return null;
+}
+```
+
+Add it to your root layout:
+
+```tsx
+// app/layout.tsx
+import { FormbricksProvider } from '@/components/FormbricksProvider';
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <FormbricksProvider />
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+### User Identification
+
+Create a component to identify users:
+
+```tsx
+// components/FormbricksUser.tsx
+'use client';
+
+import { useEffect } from 'react';
+import formbricks from '@formbricks/js';
+
+interface FormbricksUserProps {
+  userId: string;
+  email: string;
+  attributes?: Record<string, string>;
+}
+
+export function FormbricksUser({ userId, email, attributes }: FormbricksUserProps) {
+  useEffect(() => {
+    const identifyUser = async () => {
+      await formbricks.setUserId(userId);
+      await formbricks.setEmail(email);
+      
+      if (attributes) {
+        await formbricks.setAttributes(attributes);
+      }
+    };
+
+    identifyUser();
+  }, [userId, email, attributes]);
+
+  return null;
+}
+```
+
+Use it in an authenticated layout:
+
+```tsx
+// app/(authenticated)/layout.tsx
+import { auth } from '@/lib/auth';
+import { FormbricksUser } from '@/components/FormbricksUser';
+
+export default async function AuthenticatedLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const session = await auth();
+
+  return (
+    <>
+      {session?.user && (
+        <FormbricksUser
+          userId={session.user.id}
+          email={session.user.email!}
+          attributes={{
+            name: session.user.name || '',
+            plan: session.user.plan || 'free',
+          }}
+        />
+      )}
+      {children}
+    </>
+  );
+}
+```
+
+### Route Change Tracking
+
+For App Router, create a route tracker component:
+
+```tsx
+// components/FormbricksRouteTracker.tsx
+'use client';
+
+import { useEffect } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import formbricks from '@formbricks/js';
+
+export function FormbricksRouteTracker() {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    formbricks.registerRouteChange();
+  }, [pathname, searchParams]);
+
+  return null;
+}
+```
+
+Add it to your root layout:
+
+```tsx
+// app/layout.tsx
+import { FormbricksProvider } from '@/components/FormbricksProvider';
+import { FormbricksRouteTracker } from '@/components/FormbricksRouteTracker';
+import { Suspense } from 'react';
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <FormbricksProvider />
+        <Suspense fallback={null}>
+          <FormbricksRouteTracker />
+        </Suspense>
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+## Pages Router Implementation
+
+### Custom App Setup
+
+Initialize Formbricks in your `_app.tsx`:
+
+```tsx
+// pages/_app.tsx
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
+import type { AppProps } from 'next/app';
+import formbricks from '@formbricks/js';
+
+export default function App({ Component, pageProps }: AppProps) {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      formbricks.setup({
+        environmentId: process.env.NEXT_PUBLIC_FORMBRICKS_ENV_ID!,
+        appUrl: process.env.NEXT_PUBLIC_FORMBRICKS_URL!,
+      });
+    }
+  }, []);
+
+  // Track route changes
+  useEffect(() => {
+    const handleRouteChange = () => {
+      formbricks.registerRouteChange();
+    };
+
+    router.events.on('routeChangeComplete', handleRouteChange);
+    return () => {
+      router.events.off('routeChangeComplete', handleRouteChange);
+    };
+  }, [router.events]);
+
+  return <Component {...pageProps} />;
+}
+```
+
+### User Identification
+
+Create a hook for user identification:
+
+```tsx
+// hooks/useFormbricksUser.ts
+import { useEffect } from 'react';
+import formbricks from '@formbricks/js';
+
+interface User {
+  id: string;
+  email: string;
+  [key: string]: string;
+}
+
+export function useFormbricksUser(user: User | null) {
+  useEffect(() => {
+    if (!user) return;
+
+    const identifyUser = async () => {
+      await formbricks.setUserId(user.id);
+      await formbricks.setEmail(user.email);
+
+      const { id, email, ...attributes } = user;
+      if (Object.keys(attributes).length > 0) {
+        await formbricks.setAttributes(attributes);
+      }
+    };
+
+    identifyUser();
+  }, [user]);
+}
+```
+
+Use it in your pages:
+
+```tsx
+import { useFormbricksUser } from '@/hooks/useFormbricksUser';
+import { useAuth } from '@/hooks/useAuth';
+
+export default function Dashboard() {
+  const { user } = useAuth();
+  useFormbricksUser(user);
+
+  return <div>Dashboard content</div>;
+}
+```
+
+## Tracking Events
+
+### Client-Side Tracking
+
+```tsx
+'use client';
+
+import formbricks from '@formbricks/js';
+
+export function TrackingButton() {
+  const handleClick = async () => {
+    await formbricks.track('button_clicked');
+    // Your action logic
+  };
+
+  return <button onClick={handleClick}>Track Event</button>;
+}
+```
+
+### Server Actions (App Router)
+
+For tracking events from server actions:
+
+```tsx
+// app/actions.ts
+'use server';
+
+export async function submitForm(formData: FormData) {
+  // Your form processing logic
+  
+  // Note: Server-side tracking requires a different approach
+  // You would typically track this client-side or use your own analytics
+  return { success: true };
+}
+```
+
+```tsx
+// components/Form.tsx
+'use client';
+
+import { submitForm } from '@/app/actions';
+import formbricks from '@formbricks/js';
+
+export function Form() {
+  const handleSubmit = async (formData: FormData) => {
+    const result = await submitForm(formData);
+    
+    if (result.success) {
+      await formbricks.track('form_submitted');
+    }
+  };
+
+  return <form action={handleSubmit}>{/* form fields */}</form>;
+}
+```
+
+## TypeScript Configuration
+
+Create a typed configuration file:
+
+```typescript
+// lib/formbricks.ts
+import formbricks from '@formbricks/js';
+import type { TFormbricks } from '@formbricks/js';
+
+export interface FormbricksConfig {
+  environmentId: string;
+  appUrl: string;
+}
+
+export const formbricksConfig: FormbricksConfig = {
+  environmentId: process.env.NEXT_PUBLIC_FORMBRICKS_ENV_ID!,
+  appUrl: process.env.NEXT_PUBLIC_FORMBRICKS_URL || 'https://app.formbricks.com',
+};
+
+export { formbricks };
+export type { TFormbricks };
+```
+
+## Content Security Policy
+
+If you're using CSP headers, configure them in `next.config.js`:
+
+```javascript
+// next.config.js
+const cspHeader = `
+  default-src 'self';
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' ${process.env.NEXT_PUBLIC_FORMBRICKS_URL};
+  style-src 'self' 'unsafe-inline';
+  connect-src 'self' ${process.env.NEXT_PUBLIC_FORMBRICKS_URL};
+  img-src 'self' blob: data: ${process.env.NEXT_PUBLIC_FORMBRICKS_URL};
+  font-src 'self';
+  frame-src ${process.env.NEXT_PUBLIC_FORMBRICKS_URL};
+`;
+
+module.exports = {
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: cspHeader.replace(/\n/g, ''),
+          },
+        ],
+      },
+    ];
+  },
+};
+```
+
+For dynamic nonces:
+
+```tsx
+// middleware.ts
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+export function middleware(request: NextRequest) {
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
+  const cspHeader = `
+    script-src 'self' 'nonce-${nonce}' 'strict-dynamic';
+    style-src 'self' 'nonce-${nonce}';
+  `;
+
+  const response = NextResponse.next();
+  response.headers.set('Content-Security-Policy', cspHeader);
+  response.headers.set('x-nonce', nonce);
+
+  return response;
+}
+```
+
+```tsx
+// app/layout.tsx
+import { headers } from 'next/headers';
+import { FormbricksProvider } from '@/components/FormbricksProvider';
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const nonce = headers().get('x-nonce');
+
+  return (
+    <html lang="en">
+      <body>
+        <FormbricksProvider nonce={nonce || undefined} />
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+## Complete Example (App Router)
+
+```tsx
+// app/layout.tsx
+import { FormbricksProvider } from '@/components/FormbricksProvider';
+import { FormbricksRouteTracker } from '@/components/FormbricksRouteTracker';
+import { Suspense } from 'react';
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <FormbricksProvider />
+        <Suspense fallback={null}>
+          <FormbricksRouteTracker />
+        </Suspense>
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+```tsx
+// components/FormbricksProvider.tsx
+'use client';
+
+import { useEffect } from 'react';
+import formbricks from '@formbricks/js';
+
+interface FormbricksProviderProps {
+  nonce?: string;
+}
+
+export function FormbricksProvider({ nonce }: FormbricksProviderProps) {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      formbricks.setup({
+        environmentId: process.env.NEXT_PUBLIC_FORMBRICKS_ENV_ID!,
+        appUrl: process.env.NEXT_PUBLIC_FORMBRICKS_URL!,
+      });
+
+      if (nonce) {
+        formbricks.setNonce(nonce);
+      }
+    }
+  }, [nonce]);
+
+  return null;
+}
+```
+
+## Best Practices
+
+1. **Environment Variables**: Always use `NEXT_PUBLIC_` prefix for client-side variables
+2. **SSR Safety**: Check for `typeof window !== 'undefined'` before initializing
+3. **Route Tracking**: Implement route change tracking for accurate analytics
+4. **Type Safety**: Use TypeScript for better developer experience
+5. **Error Boundaries**: Wrap Formbricks calls in try-catch for production
+
+## Troubleshooting
+
+### Surveys Not Showing
+
+1. Verify environment variables are properly set
+2. Check browser console for errors
+3. Ensure route tracking is implemented
+4. Verify user identification is working
+
+### Build Errors
+
+If you encounter build errors, ensure:
+- Formbricks is only imported in client components (`'use client'`)
+- Environment variables are defined in `.env.local`
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="React Integration" icon="react" href="/integration/react">
+    Learn about general React integration patterns
+  </Card>
+  <Card title="Vue Integration" icon="vuejs" href="/integration/vue">
+    Integrate Formbricks with Vue applications
+  </Card>
+</CardGroup>

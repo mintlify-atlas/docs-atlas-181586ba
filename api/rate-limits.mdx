@@ -1,0 +1,143 @@
+---
+title: Rate Limits
+description: Understand API rate limiting
+icon: "gauge"
+---
+
+To ensure API stability and fair usage, Formbricks implements rate limiting on all API endpoints.
+
+## Rate Limit Configuration
+
+Rate limits are applied per API key:
+
+- Limits are tracked using the API key ID
+- Each API key has its own rate limit bucket
+- Session-authenticated requests use the user ID for rate limiting
+
+## Rate Limit Headers
+
+When rate limits are enforced, the API does not currently return rate limit headers, but this may be added in future versions.
+
+## Exceeded Rate Limits
+
+When you exceed the rate limit, you'll receive a `429 Too Many Requests` response:
+
+```json
+{
+  "message": "Rate limit exceeded. Please try again later."
+}
+```
+
+## Rate Limit Tiers
+
+Rate limits vary by API version and endpoint type:
+
+### v1 API
+
+The v1 API applies standard rate limiting:
+
+- **Management API**: Configured limits per API key
+- **Client API**: More permissive limits for client-side operations
+
+### v2 API
+
+The v2 API uses similar rate limiting configurations.
+
+## Best Practices
+
+<Check>
+  Follow these best practices to avoid hitting rate limits:
+</Check>
+
+### 1. Implement Exponential Backoff
+
+When you receive a `429` response, wait before retrying:
+
+```javascript
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function makeRequestWithRetry(url, options, maxRetries = 3) {
+  for (let i = 0; i < maxRetries; i++) {
+    const response = await fetch(url, options);
+    
+    if (response.status === 429) {
+      const waitTime = Math.pow(2, i) * 1000; // 1s, 2s, 4s...
+      await sleep(waitTime);
+      continue;
+    }
+    
+    return response;
+  }
+  
+  throw new Error('Max retries exceeded');
+}
+```
+
+### 2. Cache Responses
+
+Cache API responses when appropriate to reduce the number of requests:
+
+```javascript
+const cache = new Map();
+
+async function getCachedSurvey(surveyId) {
+  const cacheKey = `survey:${surveyId}`;
+  
+  if (cache.has(cacheKey)) {
+    const { data, timestamp } = cache.get(cacheKey);
+    // Cache for 5 minutes
+    if (Date.now() - timestamp < 5 * 60 * 1000) {
+      return data;
+    }
+  }
+  
+  const survey = await fetchSurvey(surveyId);
+  cache.set(cacheKey, { data: survey, timestamp: Date.now() });
+  return survey;
+}
+```
+
+### 3. Batch Operations
+
+When possible, use batch endpoints or limit query parameters to fetch multiple resources in a single request:
+
+```bash
+# Instead of fetching surveys one by one
+curl "https://app.formbricks.com/api/v1/management/surveys?limit=50"
+```
+
+### 4. Use Webhooks
+
+Instead of polling for new responses, configure webhooks to receive real-time notifications:
+
+```json
+{
+  "environmentId": "env_...",
+  "url": "https://your-app.com/webhooks/formbricks",
+  "triggers": ["responseCreated", "responseFinished"]
+}
+```
+
+### 5. Optimize Query Parameters
+
+Use filtering and pagination to reduce response sizes:
+
+```bash
+curl "https://app.formbricks.com/api/v1/management/responses?surveyId=srv_123&limit=10&offset=0"
+```
+
+## Monitoring Usage
+
+API key usage is tracked with a `lastUsedAt` timestamp. Check when your key was last used to monitor activity:
+
+- Keys update their `lastUsedAt` timestamp on use
+- Updates are throttled to once per 30 seconds to reduce database writes
+- Use this to identify active vs. inactive keys
+
+## Enterprise Rate Limits
+
+Enterprise customers may have different rate limit configurations. Contact your account manager to discuss custom rate limits for your use case.
+
+## Contact Support
+
+If you're consistently hitting rate limits with legitimate usage, please contact Formbricks support to discuss your use case.

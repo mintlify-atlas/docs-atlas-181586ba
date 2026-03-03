@@ -1,0 +1,466 @@
+---
+title: Contacts
+description: Track individual users, store custom attributes, and analyze responses by segment
+icon: users
+---
+
+Contacts (formerly called "Persons") represent individual users or respondents in Formbricks. Each contact can have custom attributes, a response history, and a unique identity across all surveys in an [environment](/concepts/environments).
+
+## What is a Contact?
+
+A **contact** is an individual user tracked within an environment. Contacts allow you to:
+
+- **Link responses** to specific users across multiple surveys
+- **Store attributes** like plan type, signup date, or location
+- **Track behavior** like which actions they've taken
+- **Target surveys** based on user characteristics
+- **Analyze responses** by user segment
+- **Prevent survey fatigue** with recontact rules
+
+Contacts are automatically created when users interact with in-product surveys. For link surveys, contacts are created when you capture identifying information (email, user ID, etc.).
+
+## Contact Identity
+
+Formbricks identifies contacts using a **user ID** that you provide:
+
+### In-Product Surveys (SDK)
+
+```typescript
+import formbricks from "@formbricks/js";
+
+formbricks.setContact({
+  userId: "user-123", // Required: Unique identifier from your system
+  attributes: {
+    email: "sarah@example.com",
+    plan: "pro",
+    signupDate: "2024-01-15"
+  }
+});
+```
+
+The `userId` should be:
+- Unique per user in your system
+- Consistent across sessions
+- From your database (user ID, account ID, etc.)
+
+<Warning>
+  **Important:** Once you call `setContact()`, all subsequent survey responses and actions from that browser session are linked to that contact. Call it as early as possible after user login.
+</Warning>
+
+### Link Surveys
+
+For link surveys, contacts are created when:
+- User provides email via a contact info question
+- You pass a `userId` in the URL: `?userId=user-123`
+- You enable single-use links (automatically generates contact)
+
+**Example link survey URL with user ID:**
+```
+https://app.formbricks.com/s/feedback?userId=user-123&email=sarah@example.com
+```
+
+### Anonymous Responses
+
+If you don't identify users, responses are still collected but not linked to a contact. These are **anonymous responses**.
+
+**Use cases for anonymous responses:**
+- Public link surveys (market research)
+- Privacy-sensitive feedback (employee surveys)
+- Pre-login feedback (landing page surveys)
+
+## Contact Attributes
+
+Attributes are custom properties you store on contacts. They're used for **targeting surveys** and **analyzing responses** by segment.
+
+### Default Attributes
+
+Formbricks tracks some attributes automatically:
+
+- **User ID**: Your unique identifier
+- **Email**: If provided
+- **Created At**: When the contact was first seen
+- **Updated At**: When attributes were last changed
+
+### Custom Attributes
+
+You can define unlimited custom attributes:
+
+**Common examples:**
+- `plan`: "free", "pro", "enterprise"
+- `role`: "admin", "member", "viewer"
+- `signupDate`: "2024-01-15"
+- `mrr`: 99 (monthly recurring revenue)
+- `country`: "US"
+- `company`: "Acme Inc."
+- `featureFlags`: ["new-dashboard", "beta-analytics"]
+
+### Attribute Data Types
+
+Formbricks supports three attribute data types:
+
+<Tabs>
+  <Tab title="String">
+    Text values. Most common type.
+    
+    ```typescript
+    formbricks.setContact({
+      userId: "user-123",
+      attributes: {
+        plan: "pro",
+        role: "admin",
+        country: "United States"
+      }
+    });
+    ```
+    
+    **Use for:** Plan types, roles, names, locations, categories
+  </Tab>
+  
+  <Tab title="Number">
+    Numeric values for calculations and comparisons.
+    
+    ```typescript
+    formbricks.setContact({
+      userId: "user-123",
+      attributes: {
+        mrr: 99,
+        teamSize: 12,
+        loginCount: 47
+      }
+    });
+    ```
+    
+    **Use for:** Revenue, counts, scores, quantities
+    
+    **Filtering:** Supports `>`, `<`, `>=`, `<=`, `=`
+  </Tab>
+  
+  <Tab title="Date">
+    Date/timestamp values for time-based targeting.
+    
+    ```typescript
+    formbricks.setContact({
+      userId: "user-123",
+      attributes: {
+        signupDate: "2024-01-15",
+        lastLoginAt: new Date().toISOString(),
+        trialEndsAt: "2024-02-15"
+      }
+    });
+    ```
+    
+    **Use for:** Signup dates, last activity, trial end dates
+    
+    **Filtering:** Supports date comparisons (before/after specific dates)
+  </Tab>
+</Tabs>
+
+### Setting Attributes
+
+**On initialization:**
+```typescript
+formbricks.setContact({
+  userId: "user-123",
+  attributes: {
+    email: "sarah@example.com",
+    plan: "pro",
+    role: "admin"
+  }
+});
+```
+
+**Updating attributes later:**
+```typescript
+// When user upgrades
+formbricks.setContact({
+  userId: "user-123",
+  attributes: {
+    plan: "enterprise",
+    mrr: 299
+  }
+});
+```
+
+Attributes are **merged**, not replaced. Updating `plan` doesn't remove `email` or `role`.
+
+### Managing Attribute Keys
+
+Before using attributes for targeting, you need to define them in Formbricks:
+
+<Steps>
+  <Step title="Navigate to Attribute Keys">
+    Go to Settings → Attribute Keys in your environment.
+  </Step>
+  <Step title="Create Attribute Key">
+    Click "Add Attribute Key" and define:
+    - **Key**: Technical name (e.g., `plan`, `signupDate`)
+    - **Name**: Display name (e.g., "Subscription Plan")
+    - **Type**: String, Number, or Date
+    - **Description**: Optional context for your team
+  </Step>
+  <Step title="Use in Targeting">
+    Once defined, the attribute appears in survey targeting rules.
+  </Step>
+</Steps>
+
+<Note>
+  Attribute keys are **per environment**. Define them separately in Development and Production, or they won't appear in targeting rules.
+</Note>
+
+## Targeting Surveys with Attributes
+
+Use contact attributes to show surveys only to specific user segments:
+
+### Simple Targeting
+
+**Example 1:** Survey only free plan users
+```
+Attribute: plan
+Condition: equals
+Value: free
+```
+
+**Example 2:** Survey only users signed up >30 days ago
+```
+Attribute: signupDate
+Condition: less than
+Value: 2024-02-01 (30 days ago)
+```
+
+### Advanced Targeting (Multiple Conditions)
+
+Combine multiple attribute filters (AND logic):
+
+```
+Attribute: plan equals "free"
+AND
+Attribute: signupDate less than "2024-02-01"
+AND
+Attribute: country equals "US"
+```
+
+**Result:** Survey only US-based free users who signed up over 30 days ago.
+
+**Use case:** Understand why long-term free users haven't upgraded.
+
+## Contact Management
+
+### Viewing Contacts
+
+Navigate to **Contacts** in the sidebar to see all contacts in your environment.
+
+**Contact list shows:**
+- User ID
+- Email (if provided)
+- Custom attributes
+- Response count
+- Last seen date
+
+**Filter contacts by:**
+- Attribute values
+- Response history
+- Date created
+
+### Contact Details
+
+Click a contact to see:
+- **Attributes**: All stored properties
+- **Response History**: All surveys they've completed
+- **Actions**: Events they've triggered
+- **Displays**: Surveys they've been shown (responded or not)
+
+### Updating Contacts
+
+Contacts can be updated via:
+
+1. **SDK**: Call `setContact()` with new attributes
+2. **API**: Update via the Contacts API endpoint
+3. **Manually**: Edit in the Formbricks dashboard (not recommended for production)
+
+### Deleting Contacts
+
+Delete contacts from the dashboard or via API.
+
+<Warning>
+  **GDPR Compliance:** Deleting a contact also deletes all their responses and associated data. This action cannot be undone.
+</Warning>
+
+## Contact Privacy & Security
+
+### PII (Personally Identifiable Information)
+
+Be mindful of what attributes you store:
+
+**Safe to store:**
+- User IDs (hashed or pseudonymized)
+- Plan types, roles, settings
+- Aggregated data (team size, usage counts)
+
+**Requires care:**
+- Email addresses
+- Names
+- IP addresses
+- Location data
+
+**Follow your privacy policy and applicable regulations (GDPR, CCPA, etc.).**
+
+### Data Retention
+
+Contacts persist in your environment until:
+- You manually delete them
+- You delete the entire environment
+- They're automatically removed by your configured retention policy (Enterprise feature)
+
+### GDPR Compliance
+
+Formbricks supports GDPR compliance:
+
+- **Right to access**: View contact data in dashboard or via API
+- **Right to deletion**: Delete contacts and all associated responses
+- **Data export**: Export all data associated with a contact
+- **Consent tracking**: Store consent status as an attribute
+
+**Example consent attribute:**
+```typescript
+formbricks.setContact({
+  userId: "user-123",
+  attributes: {
+    marketingConsent: "true",
+    consentDate: "2024-01-15"
+  }
+});
+```
+
+## Common Use Cases
+
+### Use Case 1: Segment-Specific NPS
+
+Measure NPS separately for free vs. paid users:
+
+**Survey 1: Free User NPS**
+- Targeting: `plan equals "free"`
+- Question: "How likely are you to recommend us?"
+
+**Survey 2: Paid User NPS**
+- Targeting: `plan equals "pro" OR plan equals "enterprise"`
+- Question: "How likely are you to recommend us?"
+
+**Analysis:** Compare NPS scores by segment to understand satisfaction differences.
+
+### Use Case 2: Churn Prevention
+
+Survey users likely to churn:
+
+**Targeting:**
+```
+Attribute: lastLoginAt less than "7 days ago"
+AND
+Attribute: plan equals "free"
+```
+
+**Survey:** "We noticed you haven't logged in recently. What can we improve?"
+
+### Use Case 3: Feature Adoption
+
+Survey users who haven't adopted a key feature:
+
+**Set attribute when feature is used:**
+```typescript
+formbricks.track("used_analytics_feature");
+formbricks.setContact({
+  userId: "user-123",
+  attributes: {
+    usedAnalytics: "true"
+  }
+});
+```
+
+**Survey targeting:**
+```
+Attribute: usedAnalytics not equals "true"
+AND
+Attribute: signupDate less than "14 days ago"
+```
+
+**Survey:** "What's preventing you from using our Analytics feature?"
+
+### Use Case 4: Localization
+
+Show different survey languages based on location:
+
+**Survey 1 (English):**
+- Targeting: `country equals "US" OR country equals "UK"`
+
+**Survey 2 (Spanish):**
+- Targeting: `country equals "ES" OR country equals "MX"`
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Set Contacts Early">
+    Call `setContact()` as soon as the user logs in. This ensures all subsequent actions and responses are linked to the correct contact.
+  </Accordion>
+  <Accordion title="Use Consistent User IDs">
+    Always use the same user ID format (e.g., your database primary key). Don't mix email addresses and numeric IDs.
+  </Accordion>
+  <Accordion title="Keep Attributes Minimal">
+    Only store attributes you'll use for targeting or analysis. Avoid storing sensitive PII unless necessary.
+  </Accordion>
+  <Accordion title="Update Attributes on Change">
+    When users upgrade, change roles, or update profile info, sync those changes to Formbricks immediately.
+  </Accordion>
+  <Accordion title="Define Attribute Keys First">
+    Before sending attributes via SDK, define them in Formbricks Settings → Attribute Keys. Otherwise, they won't appear in targeting.
+  </Accordion>
+  <Accordion title="Document Your Attributes">
+    Keep a README or wiki page documenting all attributes, their types, and use cases. Helps new team members understand your setup.
+  </Accordion>
+  <Accordion title="Respect User Privacy">
+    Only collect attributes you need. Follow your privacy policy and give users control over their data.
+  </Accordion>
+</AccordionGroup>
+
+## API Reference
+
+Manage contacts programmatically:
+
+**Create/Update Contact:**
+```bash
+POST /api/v1/environments/{environmentId}/contacts
+{
+  "userId": "user-123",
+  "attributes": {
+    "email": "sarah@example.com",
+    "plan": "pro"
+  }
+}
+```
+
+**Get Contact:**
+```bash
+GET /api/v1/environments/{environmentId}/contacts/{contactId}
+```
+
+**Delete Contact:**
+```bash
+DELETE /api/v1/environments/{environmentId}/contacts/{contactId}
+```
+
+See the [full API reference](/api-reference/contacts) for details.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Responses" icon="message" href="/concepts/responses">
+    Learn how responses are linked to contacts
+  </Card>
+  <Card title="Survey Targeting" icon="bullseye" href="/features/targeting">
+    Deep dive into attribute-based targeting strategies
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/contacts">
+    Manage contacts programmatically via API
+  </Card>
+  <Card title="Privacy & Compliance" icon="shield-check" href="/privacy">
+    Understand GDPR, data retention, and user privacy
+  </Card>
+</CardGroup>

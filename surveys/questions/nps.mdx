@@ -1,0 +1,266 @@
+---
+title: NPS (Net Promoter Score)
+description: Measure customer loyalty with the industry-standard Net Promoter Score question
+---
+
+The NPS (Net Promoter Score) question type is a specialized rating question that measures customer loyalty by asking how likely respondents are to recommend your product or service on a scale from 0 to 10.
+
+## Configuration
+
+### Basic Properties
+
+```typescript
+type TSurveyNPSElement = {
+  id: string;                    // Unique identifier
+  type: "nps";                    // Question type
+  headline: TI18nString;         // Main question text (required)
+  subheader?: TI18nString;       // Optional descriptive text
+  required: boolean;             // Whether response is mandatory
+  lowerLabel?: TI18nString;      // Label for 0 (default: "Not likely")
+  upperLabel?: TI18nString;      // Label for 10 (default: "Very likely")
+  isColorCodingEnabled?: boolean; // Color-code by segment (default: false)
+  imageUrl?: string;             // Optional image URL
+  videoUrl?: string;             // Optional video URL
+  isDraft?: boolean;             // Mark as draft
+};
+```
+
+### NPS Score Range
+
+The NPS question always uses a **0-10 scale** where:
+- **0-6**: Detractors (unhappy customers)
+- **7-8**: Passives (satisfied but unenthusiastic)
+- **9-10**: Promoters (loyal enthusiasts)
+
+### Color Coding
+
+When `isColorCodingEnabled: true`, the scale is visually color-coded:
+- **Red** (0-6): Detractors
+- **Yellow** (7-8): Passives
+- **Green** (9-10): Promoters
+
+### Default Labels
+
+If not specified, the default labels are:
+- `lowerLabel`: "Not likely at all"
+- `upperLabel`: "Extremely likely"
+
+## How NPS Works
+
+NPS is calculated using the formula:
+
+```
+NPS = % Promoters - % Detractors
+```
+
+The score ranges from **-100** (all detractors) to **+100** (all promoters).
+
+**Example calculation:**
+- 50% Promoters (9-10)
+- 30% Passives (7-8)
+- 20% Detractors (0-6)
+- **NPS = 50% - 20% = 30**
+
+### Score Interpretation
+
+- **Above 0**: More promoters than detractors (positive)
+- **Above 20**: Favorable
+- **Above 50**: Excellent
+- **Above 80**: World-class
+
+## Use Cases
+
+### Standard NPS Question
+
+The classic NPS question:
+
+```typescript
+{
+  id: "nps",
+  type: "nps",
+  headline: { default: "How likely are you to recommend us to a friend or colleague?" },
+  required: true,
+  isColorCodingEnabled: true,
+  lowerLabel: { default: "Not at all likely" },
+  upperLabel: { default: "Extremely likely" }
+}
+```
+
+### Product-Specific NPS
+
+Measure loyalty to a specific product:
+
+```typescript
+{
+  id: "product_nps",
+  type: "nps",
+  headline: { default: "How likely are you to recommend [Product Name] to others?" },
+  subheader: { default: "We value your feedback" },
+  required: true,
+  isColorCodingEnabled: true
+}
+```
+
+### Post-Purchase NPS
+
+Measure satisfaction after a transaction:
+
+```typescript
+{
+  id: "post_purchase_nps",
+  type: "nps",
+  headline: { default: "How likely are you to recommend our store to a friend?" },
+  required: false,
+  isColorCodingEnabled: true,
+  lowerLabel: { default: "Not likely" },
+  upperLabel: { default: "Very likely" }
+}
+```
+
+### Service NPS
+
+Measure customer service satisfaction:
+
+```typescript
+{
+  id: "support_nps",
+  type: "nps",
+  headline: { default: "Based on your recent support experience, how likely are you to recommend us?" },
+  required: true,
+  isColorCodingEnabled: true
+}
+```
+
+### Feature NPS
+
+Gauge enthusiasm for a new feature:
+
+```typescript
+{
+  id: "feature_nps",
+  type: "nps",
+  headline: { default: "How likely are you to recommend our new dashboard feature to a colleague?" },
+  subheader: { default: "Rate from 0 (not likely) to 10 (very likely)" },
+  required: false,
+  isColorCodingEnabled: false
+}
+```
+
+## Best Practices
+
+1. **Use the standard wording**: The question should ask about likelihood to recommend
+2. **Enable color coding**: Helps respondents understand the scale visually
+3. **Follow up with "why"**: Add an open-text question to understand the rating
+4. **Survey at key moments**:
+   - Post-purchase
+   - After customer support interaction
+   - Quarterly for ongoing customers
+   - After major product updates
+5. **Keep it simple**: Don't modify the 0-10 scale; it's an industry standard
+6. **Track over time**: NPS is most valuable when measured consistently
+7. **Segment your data**: Analyze NPS by customer type, product, or region
+
+## Complete NPS Survey Example
+
+A full NPS survey typically includes a follow-up question:
+
+```typescript
+[
+  {
+    id: "nps_score",
+    type: "nps",
+    headline: { default: "How likely are you to recommend us to a friend or colleague?" },
+    required: true,
+    isColorCodingEnabled: true,
+    lowerLabel: { default: "Not at all likely" },
+    upperLabel: { default: "Extremely likely" }
+  },
+  {
+    id: "nps_reason",
+    type: "openText",
+    headline: { default: "What's the main reason for your score?" },
+    longAnswer: true,
+    required: false,
+    placeholder: { default: "Please share your thoughts..." }
+  }
+]
+```
+
+## Survey Timing
+
+### When to Send NPS Surveys
+
+**Good times:**
+- After successful onboarding (30-60 days)
+- Post-purchase (1-7 days after delivery)
+- After support interactions (immediately or within 24 hours)
+- Quarterly for active users
+- After major milestones or product updates
+
+**Avoid:**
+- During free trials (too early)
+- Immediately after signup (no experience yet)
+- Too frequently (survey fatigue)
+- During known issues or outages
+
+### Frequency Guidelines
+
+- **Active customers**: Quarterly or semi-annually
+- **New customers**: 30-90 days after signup
+- **Post-interaction**: Immediately or within 24 hours
+- **Churned customers**: Once, shortly after churn
+
+## Analyzing NPS Results
+
+### Segment Analysis
+
+Break down NPS by:
+- Customer tier (free, paid, enterprise)
+- Product or service line
+- Geographic region
+- Customer tenure (new vs. long-time customers)
+- Support tier
+
+### Action Items by Segment
+
+**Detractors (0-6):**
+- Immediate follow-up
+- Identify and fix pain points
+- Consider churn prevention measures
+
+**Passives (7-8):**
+- Understand what would make them promoters
+- Highlight product value
+- Improve engagement
+
+**Promoters (9-10):**
+- Request testimonials or reviews
+- Encourage referrals
+- Identify expansion opportunities
+
+## Accessibility
+
+- Numbers 0-10 are keyboard accessible
+- Screen readers announce the NPS scale and labels
+- Color coding is supplemented with numeric values
+- Focus indicators clearly show selection
+- Required fields are properly labeled
+
+## Industry Benchmarks
+
+NPS varies by industry. General ranges:
+- **Below 0**: Needs improvement
+- **0-30**: Good
+- **30-70**: Great
+- **70+**: Excellent (top companies)
+
+**Industry examples:**
+- SaaS: 30-40 average
+- E-commerce: 45-60 average
+- Financial services: 35-45 average
+- Healthcare: 10-30 average
+
+## Related Question Types
+
+- [Rating](/surveys/questions/rating) - For other types of ratings beyond NPS
+- [Open Text](/surveys/questions/open-text) - For follow-up "why" questions

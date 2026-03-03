@@ -1,0 +1,369 @@
+---
+title: Date
+description: Collect dates from respondents with a date picker
+---
+
+The Date question type allows respondents to select a date using a date picker interface. It's ideal for collecting birthdates, appointment preferences, event dates, and other date-related information.
+
+## Configuration
+
+### Basic Properties
+
+```typescript
+type TSurveyDateElement = {
+  id: string;                    // Unique identifier
+  type: "date";                  // Question type
+  headline: TI18nString;         // Main question text (required)
+  subheader?: TI18nString;       // Optional descriptive text
+  required: boolean;             // Whether response is mandatory
+  format: "M-d-y" | "d-M-y" | "y-M-d"; // Date format
+  html?: TI18nString;            // Optional HTML content
+  validation?: TValidation;      // Advanced validation rules
+  imageUrl?: string;             // Optional image URL
+  videoUrl?: string;             // Optional video URL
+  isDraft?: boolean;             // Mark as draft
+};
+```
+
+### Date Formats
+
+Choose the date format that matches your regional preferences:
+
+- **M-d-y**: Month/Day/Year (US format) - `12/31/2024`
+- **d-M-y**: Day/Month/Year (European format) - `31/12/2024`
+- **y-M-d**: Year/Month/Day (ISO format) - `2024/12/31`
+
+The format affects both the date picker display and how dates are stored.
+
+### Validation Rules
+
+Date questions support these validation rules:
+
+```typescript
+validation: {
+  logic: "and" | "or",           // How to combine multiple rules
+  rules: [
+    {
+      id: "after_date",
+      type: "isLaterThan",
+      params: { date: "2024-01-01" }  // YYYY-MM-DD format
+    },
+    {
+      id: "before_date",
+      type: "isEarlierThan",
+      params: { date: "2024-12-31" }
+    },
+    {
+      id: "date_range",
+      type: "isBetween",
+      params: {
+        startDate: "2024-01-01",
+        endDate: "2024-12-31"
+      }
+    },
+    {
+      id: "not_in_range",
+      type: "isNotBetween",
+      params: {
+        startDate: "2024-06-01",
+        endDate: "2024-08-31"
+      }
+    }
+  ]
+}
+```
+
+**Available validation types:**
+- `isLaterThan`: Date must be after a specific date
+- `isEarlierThan`: Date must be before a specific date
+- `isBetween`: Date must be within a date range (inclusive)
+- `isNotBetween`: Date must be outside a date range
+
+**Note:** All validation `params` use `YYYY-MM-DD` format regardless of the display format.
+
+## Use Cases
+
+### Birth Date
+
+Collect date of birth:
+
+```typescript
+{
+  id: "birth_date",
+  type: "date",
+  headline: { default: "What is your date of birth?" },
+  format: "M-d-y",
+  required: true,
+  validation: {
+    logic: "and",
+    rules: [
+      {
+        id: "adult",
+        type: "isEarlierThan",
+        params: { date: "2006-01-01" }  // Must be 18+
+      }
+    ]
+  }
+}
+```
+
+### Future Event Date
+
+Schedule an appointment or event:
+
+```typescript
+{
+  id: "appointment",
+  type: "date",
+  headline: { default: "When would you like to schedule your appointment?" },
+  subheader: { default: "Select a date in the next 30 days" },
+  format: "d-M-y",
+  required: true,
+  validation: {
+    logic: "and",
+    rules: [
+      {
+        id: "future_only",
+        type: "isLaterThan",
+        params: { date: "2024-03-03" }  // Today's date
+      },
+      {
+        id: "within_30_days",
+        type: "isEarlierThan",
+        params: { date: "2024-04-02" }  // 30 days from now
+      }
+    ]
+  }
+}
+```
+
+### Historical Date
+
+Collect a past date:
+
+```typescript
+{
+  id: "last_visit",
+  type: "date",
+  headline: { default: "When was your last visit?" },
+  format: "M-d-y",
+  required: false,
+  validation: {
+    logic: "and",
+    rules: [
+      {
+        id: "past_only",
+        type: "isEarlierThan",
+        params: { date: "2024-03-04" }  // Must be in the past
+      }
+    ]
+  }
+}
+```
+
+### Date Range Restriction
+
+Limit to specific date range:
+
+```typescript
+{
+  id: "project_date",
+  type: "date",
+  headline: { default: "Select a project start date" },
+  subheader: { default: "Must be between Q2 and Q3 2024" },
+  format: "y-M-d",
+  required: true,
+  validation: {
+    logic: "and",
+    rules: [
+      {
+        id: "q2_q3_2024",
+        type: "isBetween",
+        params: {
+          startDate: "2024-04-01",
+          endDate: "2024-09-30"
+        }
+      }
+    ]
+  }
+}
+```
+
+### Exclude Specific Periods
+
+Prevent selection during blackout dates:
+
+```typescript
+{
+  id: "delivery_date",
+  type: "date",
+  headline: { default: "Preferred delivery date" },
+  subheader: { default: "We don't deliver during holidays" },
+  format: "d-M-y",
+  required: true,
+  validation: {
+    logic: "and",
+    rules: [
+      {
+        id: "not_holidays",
+        type: "isNotBetween",
+        params: {
+          startDate: "2024-12-20",
+          endDate: "2024-01-05"  // Holiday blackout period
+        }
+      },
+      {
+        id: "future_only",
+        type: "isLaterThan",
+        params: { date: "2024-03-03" }
+      }
+    ]
+  }
+}
+```
+
+### ISO Format Date
+
+Use ISO format for international audiences:
+
+```typescript
+{
+  id: "event_date",
+  type: "date",
+  headline: { default: "Event date" },
+  format: "y-M-d",
+  required: true
+}
+```
+
+## Best Practices
+
+1. **Choose the right format**: Match your audience's regional preferences
+   - US: `M-d-y`
+   - Europe/UK: `d-M-y`
+   - International/Technical: `y-M-d`
+
+2. **Use validation for constraints**: Prevent invalid date selections upfront
+   - Future dates only for appointments
+   - Past dates for historical events
+   - Age restrictions for birth dates
+
+3. **Provide clear instructions**: Use `subheader` to explain date requirements
+
+4. **Set reasonable ranges**: Don't make date ranges too restrictive
+
+5. **Consider time zones**: Date questions don't include time; use separate questions if time matters
+
+6. **Make optional when possible**: Not all dates are critical; reduce friction
+
+7. **Test date pickers**: Ensure mobile date pickers work well in your target browsers
+
+## Validation Examples
+
+### Future Dates Only
+
+Only allow dates after today:
+
+```typescript
+validation: {
+  logic: "and",
+  rules: [
+    {
+      id: "future",
+      type: "isLaterThan",
+      params: { date: "2024-03-03" }  // Set to current date dynamically
+    }
+  ]
+}
+```
+
+### Past Dates Only
+
+Only allow historical dates:
+
+```typescript
+validation: {
+  logic: "and",
+  rules: [
+    {
+      id: "past",
+      type: "isEarlierThan",
+      params: { date: "2024-03-04" }  // Tomorrow's date
+    }
+  ]
+}
+```
+
+### Specific Year Range
+
+Limit to a specific year range:
+
+```typescript
+validation: {
+  logic: "and",
+  rules: [
+    {
+      id: "2020s",
+      type: "isBetween",
+      params: {
+        startDate: "2020-01-01",
+        endDate: "2029-12-31"
+      }
+    }
+  ]
+}
+```
+
+### Next 7 Days
+
+Limit to the coming week:
+
+```typescript
+validation: {
+  logic: "and",
+  rules: [
+    {
+      id: "next_week",
+      type: "isBetween",
+      params: {
+        startDate: "2024-03-03",  // Today
+        endDate: "2024-03-10"     // 7 days from now
+      }
+    }
+  ]
+}
+```
+
+## Response Data Format
+
+Dates are stored in `YYYY-MM-DD` format regardless of display format:
+
+```json
+{
+  "date_question_id": "2024-12-31"
+}
+```
+
+This ensures consistent data processing regardless of regional display preferences.
+
+## Accessibility
+
+- Date picker is keyboard accessible (Tab, Arrow keys, Enter)
+- Screen readers announce the selected date and format
+- Validation errors are clearly announced
+- Required fields are properly labeled
+- Native browser date pickers provide familiar UX
+
+## Browser Support
+
+The date picker uses native HTML5 date input, which is supported in:
+- Chrome/Edge (all versions)
+- Safari (iOS and macOS)
+- Firefox (desktop and mobile)
+
+For older browsers, a fallback text input is provided.
+
+## Related Question Types
+
+- [Open Text](/surveys/questions/open-text) - For free-form text including dates as text
+- [Single Select](/surveys/questions/single-select) - For selecting from predefined date options

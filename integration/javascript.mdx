@@ -1,0 +1,239 @@
+---
+title: JavaScript SDK
+description: Integrate Formbricks surveys into your vanilla JavaScript application
+icon: js
+---
+
+The Formbricks JavaScript SDK allows you to integrate surveys into any vanilla JavaScript application or website.
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    Install the Formbricks JavaScript SDK using your preferred package manager:
+
+    <CodeGroup>
+      ```bash npm
+      npm install @formbricks/js
+      ```
+
+      ```bash yarn
+      yarn add @formbricks/js
+      ```
+
+      ```bash pnpm
+      pnpm add @formbricks/js
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize the SDK">
+    Import and initialize Formbricks in your main JavaScript file:
+
+    ```javascript
+    import formbricks from "@formbricks/js";
+
+    if (typeof window !== "undefined") {
+      formbricks.setup({
+        environmentId: "your-environment-id",
+        appUrl: "https://app.formbricks.com",
+      });
+    }
+    ```
+
+    <Note>
+      Replace `your-environment-id` with your actual environment ID from the Formbricks dashboard.
+    </Note>
+  </Step>
+</Steps>
+
+## Configuration
+
+The `setup()` method accepts the following configuration options:
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `environmentId` | string | Yes | Your Formbricks environment ID |
+| `appUrl` | string | Yes | Your Formbricks instance URL (e.g., `https://app.formbricks.com`) |
+
+## User Identification
+
+### Set User ID
+
+Identify users to track their responses across sessions:
+
+```javascript
+await formbricks.setUserId("user-123");
+```
+
+### Set User Email
+
+Associate an email address with the current user:
+
+```javascript
+await formbricks.setEmail("user@example.com");
+```
+
+### Set User Attributes
+
+Add custom attributes to segment and target users:
+
+```javascript
+// Set a single attribute
+await formbricks.setAttribute("plan", "premium");
+
+// Set multiple attributes at once
+await formbricks.setAttributes({
+  plan: "premium",
+  company: "Acme Inc",
+  role: "admin"
+});
+```
+
+### Set User Language
+
+Set the language preference for the user:
+
+```javascript
+await formbricks.setLanguage("en");
+```
+
+## Tracking Events
+
+Track custom events to trigger surveys based on user actions:
+
+```javascript
+// Track a simple event
+await formbricks.track("feature_used");
+
+// Track an event with properties (deprecated)
+await formbricks.track("purchase_completed", {
+  hiddenFields: {
+    amount: "99.99",
+    currency: "USD"
+  }
+});
+```
+
+<Warning>
+  Hidden fields in track properties are deprecated and will be removed in a future version.
+</Warning>
+
+## Single Page Applications (SPAs)
+
+For SPAs, you need to manually trigger route change detection:
+
+```javascript
+// Call this after route changes
+await formbricks.registerRouteChange();
+```
+
+### Example with History API
+
+```javascript
+// Intercept pushState and replaceState
+const originalPushState = history.pushState;
+const originalReplaceState = history.replaceState;
+
+history.pushState = function(...args) {
+  originalPushState.apply(this, args);
+  formbricks.registerRouteChange();
+};
+
+history.replaceState = function(...args) {
+  originalReplaceState.apply(this, args);
+  formbricks.registerRouteChange();
+};
+
+// Listen for popstate events
+window.addEventListener('popstate', () => {
+  formbricks.registerRouteChange();
+});
+```
+
+## Logout
+
+Clear user data when a user logs out:
+
+```javascript
+await formbricks.logout();
+```
+
+## Content Security Policy (CSP)
+
+If your application uses Content Security Policy, you can set a nonce for inline styles:
+
+```javascript
+formbricks.setNonce("your-csp-nonce");
+```
+
+<Note>
+  Pass the nonce value without the `nonce-` prefix.
+</Note>
+
+## TypeScript Support
+
+The SDK is fully typed. Import types as needed:
+
+```typescript
+import formbricks from "@formbricks/js";
+import type { TFormbricks } from "@formbricks/js";
+
+// The SDK instance is fully typed
+const fb: TFormbricks = formbricks;
+```
+
+## Complete Example
+
+```javascript
+import formbricks from "@formbricks/js";
+
+// Initialize
+if (typeof window !== "undefined") {
+  formbricks.setup({
+    environmentId: "clxyz123abc",
+    appUrl: "https://app.formbricks.com",
+  });
+
+  // Identify user after login
+  async function handleLogin(user) {
+    await formbricks.setUserId(user.id);
+    await formbricks.setEmail(user.email);
+    await formbricks.setAttributes({
+      plan: user.subscription.plan,
+      signupDate: user.createdAt
+    });
+  }
+
+  // Track events
+  document.querySelector('#checkout-button').addEventListener('click', () => {
+    formbricks.track('checkout_initiated');
+  });
+
+  // Handle logout
+  async function handleLogout() {
+    await formbricks.logout();
+  }
+}
+```
+
+## Debugging
+
+Enable debug mode by setting the `formbricksDebug` flag:
+
+```javascript
+window.formbricksDebug = true;
+```
+
+This will log detailed information to the browser console.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="React Integration" icon="react" href="/integration/react">
+    Learn how to integrate Formbricks with React
+  </Card>
+  <Card title="Next.js Integration" icon="n" href="/integration/nextjs">
+    Learn how to integrate Formbricks with Next.js
+  </Card>
+</CardGroup>

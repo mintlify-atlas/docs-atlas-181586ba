@@ -1,0 +1,138 @@
+---
+title: Authentication
+description: Authenticate your API requests
+icon: "key"
+---
+
+The Formbricks API uses API keys to authenticate requests. You can view and manage your API keys in the Formbricks Dashboard under **Settings > API Keys**.
+
+## API Key Types
+
+Formbricks supports two types of API keys:
+
+### V2 API Keys (Recommended)
+
+The newer, more secure API key format with improved security features:
+
+- Starts with `fbk_` prefix
+- Uses bcrypt hashing with SHA-256 lookup
+- Provides better protection against timing attacks
+
+### Legacy API Keys
+
+Older API key format using SHA-256 hashing. Both formats are supported, but V2 keys are recommended for new integrations.
+
+## Authentication Methods
+
+### API Key Authentication
+
+Include your API key in the `x-api-key` header:
+
+```bash
+curl https://app.formbricks.com/api/v1/management/surveys \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+<ParamField header="x-api-key" type="string" required>
+  Your Formbricks API key
+</ParamField>
+
+### Session Authentication
+
+For browser-based requests from logged-in users, session cookies are automatically used when no API key is provided.
+
+## API Key Permissions
+
+API keys can have different permission levels:
+
+| Permission | Access Level |
+|-----------|-------------|
+| `read` | Read-only access to resources |
+| `write` | Create and update resources |
+| `manage` | Full access including delete operations |
+
+Each API key can be scoped to specific environments. The key must have appropriate permissions for the environment you're accessing.
+
+## Environment Scoping
+
+API keys are scoped to one or more environments. When making requests:
+
+- **Management API**: The API automatically uses environments the key has access to
+- **Client API**: Specify the `environmentId` in the URL path
+
+```bash
+# Management API - uses key's environment
+curl https://app.formbricks.com/api/v1/management/surveys \
+  -H "x-api-key: YOUR_API_KEY"
+
+# Client API - specify environmentId
+curl https://app.formbricks.com/api/v1/client/{environmentId}/responses \
+  -H "Content-Type: application/json"
+```
+
+## Security Best Practices
+
+<Warning>
+  Keep your API keys secure! Do not share them in publicly accessible areas such as GitHub, client-side code, or anywhere else.
+</Warning>
+
+1. **Use V2 API keys** for new integrations
+2. **Rotate keys regularly** to minimize exposure risk
+3. **Use environment variables** to store keys securely
+4. **Scope keys appropriately** - only grant necessary permissions
+5. **Monitor key usage** via the lastUsedAt timestamp
+
+## Checking Your Access
+
+Use the `/api/v1/management/me` endpoint to verify your API key and check access:
+
+```bash
+curl https://app.formbricks.com/api/v1/management/me \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+Response:
+
+```json
+{
+  "id": "env_...",
+  "type": "production",
+  "createdAt": "2021-01-01T00:00:00.000Z",
+  "updatedAt": "2021-01-01T00:00:00.000Z",
+  "appSetupCompleted": true,
+  "project": {
+    "id": "prj_...",
+    "name": "My Project"
+  }
+}
+```
+
+## Error Responses
+
+### Missing API Key
+
+```json
+{
+  "message": "Not authenticated"
+}
+```
+
+### Invalid API Key
+
+```json
+{
+  "message": "Not authenticated"
+}
+```
+
+### Insufficient Permissions
+
+```json
+{
+  "message": "Unauthorized"
+}
+```
+
+## Rate Limiting
+
+API keys are subject to rate limiting. Each key is tracked separately. See [Rate Limits](/api/rate-limits) for details.

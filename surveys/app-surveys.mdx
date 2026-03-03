@@ -1,0 +1,630 @@
+---
+title: 'App Surveys'
+description: 'Integrate surveys in mobile and desktop applications'
+icon: 'mobile-screen'
+---
+
+App surveys enable you to collect feedback directly within your mobile or desktop applications. Formbricks provides native SDKs for iOS, Android, React Native, and Flutter.
+
+## Overview
+
+App surveys work similarly to website surveys but are optimized for native mobile and desktop environments. They support:
+
+- Native UI components for better performance
+- Offline response queueing
+- Platform-specific gestures and interactions
+- Deep integration with app lifecycle events
+
+```typescript
+// App surveys use the same type as website surveys
+interface TSurvey {
+  type: "app" | "link";
+  displayOption: TSurveyDisplayOption;
+  triggers: Array<{ actionClass: TActionClass }>;
+}
+```
+
+## Platform Support
+
+<CardGroup cols={2}>
+  <Card title="iOS" icon="apple" href="#ios-swift">
+    Native Swift SDK for iOS apps
+  </Card>
+  
+  <Card title="Android" icon="android" href="#android-kotlin">
+    Kotlin SDK for Android apps
+  </Card>
+  
+  <Card title="React Native" icon="react" href="#react-native">
+    Cross-platform React Native support
+  </Card>
+  
+  <Card title="Flutter" icon="f" href="#flutter">
+    Dart SDK for Flutter apps
+  </Card>
+</CardGroup>
+
+## iOS (Swift)
+
+### Installation
+
+<Steps>
+  <Step title="Add Swift Package">
+    Add the Formbricks iOS SDK to your Xcode project:
+    
+    ```
+    https://github.com/formbricks/formbricks-ios
+    ```
+    
+    Or using Swift Package Manager:
+    
+    ```swift
+    dependencies: [
+      .package(url: "https://github.com/formbricks/formbricks-ios", from: "1.0.0")
+    ]
+    ```
+  </Step>
+  
+  <Step title="Import SDK">
+    ```swift
+    import Formbricks
+    ```
+  </Step>
+  
+  <Step title="Initialize in AppDelegate">
+    ```swift
+    func application(_ application: UIApplication, 
+                    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        Formbricks.configure(
+            environmentId: "your-environment-id",
+            apiHost: "https://your-formbricks-instance.com"
+        )
+        
+        return true
+    }
+    ```
+  </Step>
+</Steps>
+
+### Tracking Events
+
+```swift
+// Track custom events
+Formbricks.track(name: "product_viewed")
+
+// Track with attributes
+Formbricks.track(
+    name: "purchase_completed",
+    properties: [
+        "order_value": "99.99",
+        "product_category": "electronics"
+    ]
+)
+```
+
+### User Identification
+
+```swift
+// Set user ID
+Formbricks.setUserId("user_12345")
+
+// Set user attributes
+Formbricks.setAttributes([
+    "email": "user@example.com",
+    "plan": "premium",
+    "signup_date": "2024-01-15"
+])
+
+// Logout
+Formbricks.logout()
+```
+
+### Screen Tracking
+
+```swift
+// Track screen views automatically in UIViewController
+override func viewDidAppear(_ animated: Bool) {
+    super.viewDidAppear(animated)
+    Formbricks.trackScreen(name: "ProductDetailScreen")
+}
+
+// Or track manually
+Formbricks.trackScreen(name: "HomeScreen")
+```
+
+## Android (Kotlin)
+
+### Installation
+
+<Steps>
+  <Step title="Add dependency">
+    Add to your `build.gradle`:
+    
+    ```gradle
+    dependencies {
+        implementation 'com.formbricks:formbricks-android:1.0.0'
+    }
+    ```
+  </Step>
+  
+  <Step title="Initialize in Application class">
+    ```kotlin
+    class MyApplication : Application() {
+        override fun onCreate() {
+            super.onCreate()
+            
+            Formbricks.initialize(
+                context = this,
+                environmentId = "your-environment-id",
+                apiHost = "https://your-formbricks-instance.com"
+            )
+        }
+    }
+    ```
+  </Step>
+  
+  <Step title="Update AndroidManifest.xml">
+    ```xml
+    <application
+        android:name=".MyApplication"
+        ...>
+    </application>
+    ```
+  </Step>
+</Steps>
+
+### Tracking Events
+
+```kotlin
+// Track custom events
+Formbricks.track("product_viewed")
+
+// Track with properties
+Formbricks.track(
+    event = "purchase_completed",
+    properties = mapOf(
+        "order_value" to "99.99",
+        "product_category" to "electronics"
+    )
+)
+```
+
+### User Identification
+
+```kotlin
+// Set user ID
+Formbricks.setUserId("user_12345")
+
+// Set user attributes
+Formbricks.setAttributes(
+    mapOf(
+        "email" to "user@example.com",
+        "plan" to "premium",
+        "signup_date" to "2024-01-15"
+    )
+)
+
+// Logout
+Formbricks.logout()
+```
+
+### Activity Tracking
+
+```kotlin
+class ProductDetailActivity : AppCompatActivity() {
+    override fun onResume() {
+        super.onResume()
+        Formbricks.trackScreen("ProductDetailScreen")
+    }
+}
+```
+
+## React Native
+
+### Installation
+
+<Steps>
+  <Step title="Install package">
+    ```bash
+    npm install @formbricks/react-native
+    ```
+  </Step>
+  
+  <Step title="Install pods (iOS only)">
+    ```bash
+    cd ios && pod install
+    ```
+  </Step>
+  
+  <Step title="Initialize in App.tsx">
+    ```tsx
+    import { useEffect } from 'react';
+    import Formbricks from '@formbricks/react-native';
+    
+    export default function App() {
+      useEffect(() => {
+        Formbricks.initialize({
+          environmentId: 'your-environment-id',
+          apiHost: 'https://your-formbricks-instance.com'
+        });
+      }, []);
+      
+      return (
+        <YourApp />
+      );
+    }
+    ```
+  </Step>
+</Steps>
+
+### Tracking Events
+
+```tsx
+import Formbricks from '@formbricks/react-native';
+
+// Track events
+await Formbricks.track('button_clicked');
+
+// Track with properties
+await Formbricks.track('purchase_completed', {
+  orderValue: '99.99',
+  productCategory: 'electronics'
+});
+```
+
+### User Identification
+
+```tsx
+// Set user ID
+await Formbricks.setUserId('user_12345');
+
+// Set attributes
+await Formbricks.setAttributes({
+  email: 'user@example.com',
+  plan: 'premium'
+});
+
+// Logout
+await Formbricks.logout();
+```
+
+### Screen Tracking with React Navigation
+
+```tsx
+import { useNavigationContainerRef } from '@react-navigation/native';
+import Formbricks from '@formbricks/react-native';
+
+function App() {
+  const navigationRef = useNavigationContainerRef();
+  const routeNameRef = useRef();
+  
+  return (
+    <NavigationContainer
+      ref={navigationRef}
+      onReady={() => {
+        routeNameRef.current = navigationRef.getCurrentRoute()?.name;
+      }}
+      onStateChange={async () => {
+        const previousRouteName = routeNameRef.current;
+        const currentRouteName = navigationRef.getCurrentRoute()?.name;
+        
+        if (previousRouteName !== currentRouteName) {
+          await Formbricks.trackScreen(currentRouteName);
+        }
+        
+        routeNameRef.current = currentRouteName;
+      }}
+    >
+      {/* Your app screens */}
+    </NavigationContainer>
+  );
+}
+```
+
+## Flutter
+
+### Installation
+
+<Steps>
+  <Step title="Add dependency">
+    Add to `pubspec.yaml`:
+    
+    ```yaml
+    dependencies:
+      formbricks_flutter: ^1.0.0
+    ```
+  </Step>
+  
+  <Step title="Install packages">
+    ```bash
+    flutter pub get
+    ```
+  </Step>
+  
+  <Step title="Initialize in main.dart">
+    ```dart
+    import 'package:formbricks_flutter/formbricks_flutter.dart';
+    
+    void main() async {
+      WidgetsFlutterBinding.ensureInitialized();
+      
+      await Formbricks.initialize(
+        environmentId: 'your-environment-id',
+        apiHost: 'https://your-formbricks-instance.com',
+      );
+      
+      runApp(MyApp());
+    }
+    ```
+  </Step>
+</Steps>
+
+### Tracking Events
+
+```dart
+// Track events
+await Formbricks.track('button_clicked');
+
+// Track with properties
+await Formbricks.track(
+  'purchase_completed',
+  properties: {
+    'order_value': '99.99',
+    'product_category': 'electronics',
+  },
+);
+```
+
+### User Identification
+
+```dart
+// Set user ID
+await Formbricks.setUserId('user_12345');
+
+// Set attributes
+await Formbricks.setAttributes({
+  'email': 'user@example.com',
+  'plan': 'premium',
+});
+
+// Logout
+await Formbricks.logout();
+```
+
+## Common Features
+
+The following features work across all platforms:
+
+### Display Configuration
+
+Control when and how surveys appear:
+
+```json
+{
+  "displayOption": "displayOnce",
+  "recontactDays": 7,
+  "displayLimit": 3,
+  "displayPercentage": 50
+}
+```
+
+### Trigger Actions
+
+Define triggers in the Formbricks dashboard:
+
+- **Code Triggers**: Match tracked events by identifier
+- **Screen View**: Trigger on specific screen names
+- **Custom Logic**: Combine multiple conditions
+
+### Audience Targeting
+
+Target users based on attributes:
+
+```json
+{
+  "segment": {
+    "filters": [
+      {
+        "attribute": "plan",
+        "operator": "equals",
+        "value": "premium"
+      },
+      {
+        "attribute": "app_version",
+        "operator": "greaterThan",
+        "value": "2.0.0"
+      }
+    ]
+  }
+}
+```
+
+## Offline Support
+
+All SDKs support offline response queueing:
+
+1. Responses are stored locally when offline
+2. Automatically sync when connection restores
+3. Configurable retry logic
+4. Storage limits to prevent data buildup
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Initialize early" icon="rocket">
+    Initialize Formbricks as early as possible in your app lifecycle to ensure surveys can trigger on app launch.
+  </Accordion>
+  
+  <Accordion title="Track meaningful events" icon="bullseye">
+    Focus on key user actions that indicate engagement or friction points:
+    - Onboarding completed
+    - Feature discovered
+    - Purchase completed
+    - Error encountered
+  </Accordion>
+  
+  <Accordion title="Respect app permissions" icon="shield">
+    Request appropriate permissions before collecting data. Be transparent about data usage.
+  </Accordion>
+  
+  <Accordion title="Test on real devices" icon="mobile">
+    Always test surveys on physical devices across different screen sizes and OS versions.
+  </Accordion>
+  
+  <Accordion title="Monitor SDK performance" icon="gauge">
+    Track SDK impact on app performance:
+    - Bundle size increase
+    - Memory usage
+    - Battery consumption
+    - Network requests
+  </Accordion>
+  
+  <Accordion title="Handle errors gracefully" icon="triangle-exclamation">
+    Wrap SDK calls in try-catch blocks to prevent crashes:
+    
+    ```swift
+    do {
+        try Formbricks.track("event_name")
+    } catch {
+        print("Formbricks error: \(error)")
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Platform-Specific Considerations
+
+### iOS
+
+- **App Tracking Transparency**: Request tracking permission on iOS 14.5+
+- **Background Mode**: Survey data syncs when app returns to foreground
+- **Universal Links**: Support deep linking from survey notifications
+
+### Android
+
+- **ProGuard**: Add ProGuard rules if using code obfuscation
+- **Background Restrictions**: Handle Android's battery optimization
+- **Multi-Window**: Test surveys in split-screen mode
+
+### React Native
+
+- **Hermes**: Compatible with Hermes JavaScript engine
+- **Expo**: Works with both bare and managed workflows
+- **Navigation**: Supports React Navigation and React Native Navigation
+
+### Flutter
+
+- **Web Support**: Limited web platform support
+- **Desktop**: Experimental support for macOS and Windows
+- **Hot Reload**: Initialization persists across hot reloads
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="SDK not initializing" icon="circle-exclamation">
+    - Verify `environmentId` and `apiHost` are correct
+    - Check network connectivity
+    - Review app logs for initialization errors
+    - Ensure SDK is initialized before tracking events
+  </Accordion>
+  
+  <Accordion title="Surveys not appearing" icon="eye-slash">
+    - Confirm survey type is set to **App**
+    - Verify trigger conditions match tracked events
+    - Check if user meets audience targeting criteria
+    - Review recontact days and display limits
+    - Test in development/staging environment first
+  </Accordion>
+  
+  <Accordion title="Events not tracking" icon="chart-line">
+    - Verify event names match exactly (case-sensitive)
+    - Check network tab for failed API requests
+    - Ensure user is identified if required by segment
+    - Confirm app has internet connectivity
+  </Accordion>
+  
+  <Accordion title="Build errors" icon="hammer">
+    - Update to latest SDK version
+    - Clear build cache and rebuild
+    - Check platform-specific requirements
+    - Review SDK changelog for breaking changes
+  </Accordion>
+</AccordionGroup>
+
+## Example: Complete Integration
+
+Here's a complete example for iOS:
+
+```swift
+import UIKit
+import Formbricks
+
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    
+    func application(_ application: UIApplication,
+                    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
+        
+        // Initialize Formbricks
+        Formbricks.configure(
+            environmentId: "clxxx123456789",
+            apiHost: "https://app.formbricks.com"
+        )
+        
+        return true
+    }
+}
+
+class ViewController: UIViewController {
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        // Identify user
+        Formbricks.setUserId("user_12345")
+        Formbricks.setAttributes([
+            "email": "user@example.com",
+            "plan": "premium"
+        ])
+    }
+    
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        // Track screen view
+        Formbricks.trackScreen(name: "HomeScreen")
+    }
+    
+    @IBAction func checkoutButtonTapped(_ sender: UIButton) {
+        // Track event
+        Formbricks.track(
+            name: "checkout_started",
+            properties: [
+                "cart_value": "299.99",
+                "item_count": "3"
+            ]
+        )
+    }
+}
+```
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Website Surveys" icon="browser" href="/surveys/website-surveys">
+    Implement surveys on websites
+  </Card>
+  
+  <Card title="iOS SDK Reference" icon="apple" href="/integration/ios">
+    Complete iOS SDK documentation
+  </Card>
+  
+  <Card title="Android SDK Reference" icon="android" href="/integration/android">
+    Complete Android SDK documentation
+  </Card>
+  
+  <Card title="Conditional Logic" icon="code-branch" href="/surveys/features/conditional-logic">
+    Create dynamic survey flows
+  </Card>
+</CardGroup>

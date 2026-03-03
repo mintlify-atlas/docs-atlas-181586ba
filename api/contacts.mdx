@@ -1,0 +1,291 @@
+---
+title: Contacts
+description: Manage contacts and contact attributes
+icon: "users"
+---
+
+The Contacts API allows you to manage identified users and their attributes. Contact tracking is an Enterprise feature.
+
+<Note>
+  Contact identification and management is only available for Enterprise customers. Free and Pro plans will receive a `403 Forbidden` response.
+</Note>
+
+## The Contact Object
+
+### Attributes
+
+<ResponseField name="id" type="string">
+  Unique identifier for the contact
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of when the contact was created
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of when the contact was last updated
+</ResponseField>
+
+<ResponseField name="environmentId" type="string">
+  The environment this contact belongs to
+</ResponseField>
+
+<ResponseField name="userId" type="string">
+  Your system's unique identifier for this user
+</ResponseField>
+
+<ResponseField name="attributes" type="object">
+  Custom attributes associated with this contact
+</ResponseField>
+
+## List Contacts
+
+Retrieve contacts from your environment.
+
+<CodeGroup>
+```bash cURL
+curl https://app.formbricks.com/api/v1/management/contacts \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/management/contacts',
+  {
+    headers: {
+      'x-api-key': 'YOUR_API_KEY'
+    }
+  }
+);
+
+const contacts = await response.json();
+```
+</CodeGroup>
+
+### Response
+
+```json
+[
+  {
+    "id": "con_...",
+    "createdAt": "2021-01-01T00:00:00.000Z",
+    "updatedAt": "2021-01-01T00:00:00.000Z",
+    "environmentId": "env_...",
+    "userId": "user_123",
+    "attributes": {
+      "email": "user@example.com",
+      "name": "John Doe",
+      "plan": "enterprise"
+    }
+  }
+]
+```
+
+## Retrieve a Contact
+
+Get a specific contact by ID.
+
+<CodeGroup>
+```bash cURL
+curl https://app.formbricks.com/api/v1/management/contacts/{contactId} \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/management/contacts/con_123',
+  {
+    headers: {
+      'x-api-key': 'YOUR_API_KEY'
+    }
+  }
+);
+
+const contact = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="contactId" type="string" required>
+  The ID of the contact to retrieve
+</ParamField>
+
+## Identify a User (Client API)
+
+Identify a user from your application to create or update a contact.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://app.formbricks.com/api/v1/client/{environmentId}/user \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "user_123",
+    "attributes": {
+      "email": "user@example.com",
+      "name": "John Doe",
+      "plan": "enterprise"
+    }
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/client/env_123/user',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      userId: 'user_123',
+      attributes: {
+        email: 'user@example.com',
+        name: 'John Doe',
+        plan: 'enterprise'
+      }
+    })
+  }
+);
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="environmentId" type="string" required>
+  Your environment ID
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="userId" type="string" required>
+  Your unique identifier for this user
+</ParamField>
+
+<ParamField body="attributes" type="object">
+  Contact attributes to set or update
+</ParamField>
+
+### Response
+
+Returns the created or updated contact object.
+
+## Contact Attributes
+
+Contact attributes are custom key-value pairs you can associate with contacts.
+
+### Common Attributes
+
+- `email` - User's email address
+- `name` - User's full name
+- `plan` - Subscription plan
+- `company` - Company name
+- `role` - User role
+- Custom attributes specific to your application
+
+### Attribute Types
+
+Attributes are stored as strings. The Contact Attribute Keys API allows you to define the schema for your attributes.
+
+## Contact Attribute Keys
+
+Manage the schema for contact attributes.
+
+### List Attribute Keys
+
+<CodeGroup>
+```bash cURL
+curl https://app.formbricks.com/api/v1/management/contact-attribute-keys \
+  -H "x-api-key: YOUR_API_KEY"
+```
+</CodeGroup>
+
+### Create Attribute Key
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://app.formbricks.com/api/v1/management/contact-attribute-keys \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "department",
+    "type": "text"
+  }'
+```
+</CodeGroup>
+
+### Delete Attribute Key
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE https://app.formbricks.com/api/v1/management/contact-attribute-keys/{keyId} \
+  -H "x-api-key: YOUR_API_KEY"
+```
+</CodeGroup>
+
+## Use Cases
+
+### Target Surveys by Attributes
+
+Use contact attributes to target surveys to specific user segments:
+
+```javascript
+// Identify user with attributes
+await fetch('https://app.formbricks.com/api/v1/client/env_123/user', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    userId: 'user_123',
+    attributes: {
+      plan: 'enterprise',
+      role: 'admin'
+    }
+  })
+});
+
+// Survey targeting can then use these attributes
+```
+
+### Track User Journey
+
+Associate all responses from a user:
+
+```javascript
+// Submit response with userId
+await fetch('https://app.formbricks.com/api/v1/client/env_123/responses', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    surveyId: 'srv_456',
+    userId: 'user_123',
+    finished: true,
+    data: { qst_1: 'answer' }
+  })
+});
+
+// Response is linked to contact
+```
+
+### Enrich Response Data
+
+Contact attributes are included in response data:
+
+```json
+{
+  "id": "res_...",
+  "contactId": "con_...",
+  "contactAttributes": {
+    "email": "user@example.com",
+    "plan": "enterprise"
+  },
+  "data": {...}
+}
+```
+
+## Best Practices
+
+1. **Consistent User IDs**: Use the same `userId` across your application and Formbricks
+2. **Minimal Attributes**: Only store attributes you'll use for targeting or analysis
+3. **Update Regularly**: Keep attributes current by updating them when user data changes
+4. **Privacy Compliance**: Ensure you have permission to track and store user data
+5. **Attribute Schema**: Define attribute keys to maintain consistent data structure

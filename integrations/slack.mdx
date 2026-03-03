@@ -1,0 +1,231 @@
+---
+title: Slack Integration
+description: Send survey responses to Slack channels in real-time with Formbricks.
+---
+
+The Slack integration allows you to automatically post survey responses to Slack channels as they arrive. Perfect for keeping your team informed about customer feedback, NPS scores, or any other survey insights.
+
+## What Gets Synced
+
+When a user completes a linked survey, Formbricks sends a formatted message to your Slack channel containing:
+
+- Survey name
+- Selected question responses
+- Timestamp of submission
+
+Each response appears as a structured message with clear formatting for easy reading.
+
+## Setup for Formbricks Cloud
+
+<Steps>
+  <Step title="Navigate to Integrations">
+    In your Formbricks dashboard, click **Configuration** in the sidebar, then go to **Integrations** and click **Connect** under the Slack card.
+    
+    ![Formbricks Integrations Tab](/images/xm-and-surveys/core-features/integrations/slack/integrations-tab.webp)
+  </Step>
+
+  <Step title="Connect with Slack">
+    Click the **Connect with Slack** button to start the OAuth flow.
+    
+    ![Connect Formbricks with your Slack Workspace](/images/xm-and-surveys/core-features/integrations/slack/connect-with-slack.webp)
+  </Step>
+
+  <Step title="Authorize Formbricks">
+    You'll be redirected to Slack's OAuth page. Select your workspace and click **Allow** to grant permissions.
+    
+    ![Slack OAuth Page](/images/xm-and-surveys/core-features/integrations/slack/slack-auth.webp)
+  </Step>
+
+  <Step title="Confirm Connection">
+    After authorization, you'll return to Formbricks and see a connected status.
+    
+    ![Formbricks is now connected with Slack](/images/xm-and-surveys/core-features/integrations/slack/slack-connected.webp)
+  </Step>
+
+  <Step title="Add Formbricks Bot to Channel">
+    Before linking a channel, you must add the Formbricks bot:
+    
+    1. Go to your target Slack channel
+    2. Click the three dots at the top right
+    3. Select **Edit Settings** > **Integrations**
+    4. Click **Add apps**
+    5. Search for "Formbricks" and add the bot
+    
+    ![Add Slack Bot Steps](/images/xm-and-surveys/core-features/integrations/slack/add-slack-bot-4.webp)
+  </Step>
+
+  <Step title="Link Channel to Survey">
+    Back in Formbricks, click **Link Channel**. A modal will open.
+    
+    ![Link Formbricks with a Slack Channel](/images/xm-and-surveys/core-features/integrations/slack/link-survey-with-channel.webp)
+  </Step>
+
+  <Step title="Configure Question Mapping">
+    Select:
+    - The Slack channel to post to
+    - The survey to monitor
+    - Which question responses to include
+    
+    Then click **Link Channel**.
+    
+    ![Select question to link with Slack Channel](/images/xm-and-surveys/core-features/integrations/slack/link-with-questions.webp)
+  </Step>
+
+  <Step title="Verify Setup">
+    You'll see your linked channel in the list. Responses will now automatically post to Slack!
+    
+    ![List of linked Slack Channels](/images/xm-and-surveys/core-features/integrations/slack/list-linked-surveys.webp)
+  </Step>
+</Steps>
+
+## Self-Hosted Setup
+
+To enable Slack integration on a self-hosted instance:
+
+<Note>
+  **HTTPS Required**: Slack OAuth requires HTTPS. If running locally, use the `--experimental-https` flag:
+  
+  ```json package.json
+  "go": "next dev --experimental-https -p 3000"
+  ```
+  
+  Update `WEBAPP_URL` in your `.env` to `https://localhost:3000` and run your terminal as admin.
+</Note>
+
+<Steps>
+  <Step title="Create Slack App">
+    1. Go to [Slack API: Your Apps](https://api.slack.com/apps)
+    2. Click **Create New App** > **From Scratch**
+    3. Provide an app name and select your workspace
+  </Step>
+
+  <Step title="Configure Scopes">
+    Under **OAuth & Permissions**, add these Bot Token Scopes:
+    - `channels:read`
+    - `groups:read`
+    - `chat:write`
+    - `chat:write.public`
+    - `chat:write.customize`
+  </Step>
+
+  <Step title="Set Redirect URI">
+    Under **OAuth & Permissions** > **Redirect URLs**, add:
+    
+    ```
+    https://<your-domain>/api/v1/integrations/slack/callback
+    ```
+    
+    For local development: `https://localhost:3000/api/v1/integrations/slack/callback`
+  </Step>
+
+  <Step title="Install App">
+    Click **Install to Workspace** and allow the requested permissions.
+  </Step>
+
+  <Step title="Copy Credentials">
+    Go to **Basic Information** and copy:
+    - Client ID
+    - Client Secret
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Add to your Formbricks `.env` file:
+    
+    ```bash
+    SLACK_CLIENT_ID=<your-client-id>
+    SLACK_CLIENT_SECRET=<your-client-secret>
+    ```
+  </Step>
+
+  <Step title="Enable Public Distribution">
+    1. Go to **Basic Information** > **Manage distribution**
+    2. Complete the checklist
+    3. Click **Activate public distribution**
+  </Step>
+</Steps>
+
+Once configured, follow the [Cloud setup steps](#setup-for-formbricks-cloud) to link channels.
+
+## Message Format
+
+Slack messages are formatted using blocks for readability:
+
+```json
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "Customer Satisfaction Survey\n"
+      }
+    },
+    {
+      "type": "divider"
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*How satisfied are you?*"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "Very satisfied\n"
+      }
+    }
+  ]
+}
+```
+
+Messages are automatically truncated if they exceed Slack's message limit.
+
+## API Implementation
+
+The integration uses Slack's Web API:
+
+- **Fetch Channels**: `GET https://slack.com/api/users.conversations`
+- **Post Message**: `POST https://slack.com/api/chat.postMessage`
+
+Messages are sent via `apps/web/lib/slack/service.ts:writeDataToSlack()` whenever a response is submitted for a linked survey.
+
+## Remove Integration
+
+<Steps>
+  <Step title="Open Integrations">
+    Go to **Configuration** > **Integrations**
+  </Step>
+
+  <Step title="Manage Slack">
+    Click **Manage** on the Slack card
+  </Step>
+
+  <Step title="Delete">
+    Click **Delete Integration** and confirm
+  </Step>
+</Steps>
+
+![Delete Slack Integration](/images/xm-and-surveys/core-features/integrations/slack/delete-connection.webp)
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Channel not appearing in dropdown">
+    Ensure the Formbricks bot has been added to the channel (see Step 5 in setup).
+  </Accordion>
+
+  <Accordion title="Messages not posting">
+    - Verify the bot has `chat:write` and `chat:write.public` permissions
+    - Check that the survey is linked to the correct channel
+    - Ensure the survey has at least one question mapped
+  </Accordion>
+
+  <Accordion title="Token expired error">
+    If you see a token expiration error, disconnect and reconnect the integration to refresh the OAuth token.
+  </Accordion>
+</AccordionGroup>
+
+Need more help? [Join our GitHub Discussions](https://github.com/formbricks/formbricks/discussions)!

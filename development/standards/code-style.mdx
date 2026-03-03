@@ -1,0 +1,759 @@
+---
+title: Code Style Guide
+description: Coding standards and conventions for Formbricks development
+icon: code
+---
+
+This guide outlines the coding standards and best practices for contributing to Formbricks.
+
+## General Principles
+
+<CardGroup cols={2}>
+  <Card title="DRY" icon="repeat">
+    Don't Repeat Yourself - Extract reusable logic
+  </Card>
+  <Card title="KISS" icon="sparkles">
+    Keep It Simple, Stupid - Favor simplicity
+  </Card>
+  <Card title="SOLID" icon="layer-group">
+    Follow SOLID principles for clean code
+  </Card>
+  <Card title="Clean Code" icon="broom">
+    Write code that's easy to read and maintain
+  </Card>
+</CardGroup>
+
+## TypeScript Standards
+
+### Type Safety
+
+Use TypeScript for all code. Leverage the type system for safety.
+
+<CodeGroup>
+```typescript Good
+import type { Survey } from "@formbricks/types/survey";
+
+interface GetSurveyOptions {
+  surveyId: string;
+  environmentId: string;
+}
+
+const getSurvey = async ({ surveyId, environmentId }: GetSurveyOptions): Promise<Survey> => {
+  // Implementation
+};
+```
+
+```typescript Bad
+const getSurvey = async (surveyId: any, environmentId: any): Promise<any> => {
+  // Avoid using 'any'
+};
+```
+</CodeGroup>
+
+### Type Inference
+
+Prefer type inference when the type is obvious.
+
+<CodeGroup>
+```typescript Good
+const count = surveys.length; // Type inferred as number
+const names = surveys.map(s => s.name); // Type inferred as string[]
+```
+
+```typescript Unnecessary
+const count: number = surveys.length;
+const names: string[] = surveys.map(s => s.name);
+```
+</CodeGroup>
+
+### Shared Types
+
+Use types from `@formbricks/types` package:
+
+```typescript
+import type { Survey } from "@formbricks/types/survey";
+import type { Response } from "@formbricks/types/response";
+import type { User } from "@formbricks/types/user";
+```
+
+### Avoid `any`
+
+Never use `any`. Use `unknown` if type is truly unknown:
+
+<CodeGroup>
+```typescript Good
+const parseData = (data: unknown): Survey => {
+  // Validate and parse
+  return surveySchema.parse(data);
+};
+```
+
+```typescript Bad
+const parseData = (data: any): Survey => {
+  return data as Survey; // Unsafe
+};
+```
+</CodeGroup>
+
+## Naming Conventions
+
+### Variables and Functions
+
+Use `camelCase` for variables and functions:
+
+```typescript
+const surveyCount = 10;
+const getUserById = (id: string) => { ... };
+```
+
+### Components and Classes
+
+Use `PascalCase` for React components and classes:
+
+```typescript
+const SurveyList = () => { ... };
+class SurveyService { ... }
+```
+
+### Constants
+
+Use `SCREAMING_SNAKE_CASE` only for true constants:
+
+```typescript
+const MAX_SURVEY_LENGTH = 100;
+const API_BASE_URL = "https://api.formbricks.com";
+```
+
+### Files and Folders
+
+- **Components**: `PascalCase.tsx` (e.g., `SurveyList.tsx`)
+- **Utilities**: `camelCase.ts` (e.g., `surveyUtils.ts`)
+- **Modules/Folders**: `kebab-case` or `camelCase` (e.g., `survey-editor/`)
+
+### Meaningful Names
+
+Use descriptive, self-documenting names:
+
+<CodeGroup>
+```typescript Good
+const filteredActiveSurveys = surveys.filter(s => s.status === "active");
+const calculateAverageResponseTime = (responses: Response[]) => { ... };
+```
+
+```typescript Bad
+const arr = surveys.filter(s => s.status === "active");
+const calc = (r: Response[]) => { ... };
+```
+</CodeGroup>
+
+## React Standards
+
+### Server vs Client Components
+
+Use Server Components by default. Only use Client Components when needed.
+
+<CodeGroup>
+```typescript Server Component (Default)
+// No "use client" directive
+import { getSurveys } from "@/lib/survey/service";
+
+const SurveyList = async () => {
+  const surveys = await getSurveys();
+  return <div>{/* Render surveys */}</div>;
+};
+```
+
+```typescript Client Component (When Needed)
+"use client";
+
+import { useState } from "react";
+
+const SurveyFilter = () => {
+  const [filter, setFilter] = useState("");
+  // Interactive UI requiring state
+};
+```
+</CodeGroup>
+
+**Use Client Components for:**
+- State management (`useState`, `useReducer`)
+- Effects (`useEffect`)
+- Event handlers (onClick, onChange)
+- Browser APIs
+- Third-party libraries requiring browser context
+
+### Component Structure
+
+Follow a consistent component structure:
+
+```typescript
+"use client"; // If needed
+
+// 1. Imports
+import { useState } from "react";
+import type { Survey } from "@formbricks/types/survey";
+
+// 2. Types/Interfaces
+interface SurveyCardProps {
+  survey: Survey;
+  onDelete?: (id: string) => void;
+}
+
+// 3. Component
+export const SurveyCard = ({ survey, onDelete }: SurveyCardProps) => {
+  // 4. Hooks
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // 5. Handlers
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    await onDelete?.(survey.id);
+    setIsDeleting(false);
+  };
+
+  // 6. Render
+  return (
+    <div>
+      <h3>{survey.name}</h3>
+      <button onClick={handleDelete} disabled={isDeleting}>
+        Delete
+      </button>
+    </div>
+  );
+};
+```
+
+### Hooks Rules
+
+Follow React hooks rules:
+
+- Call hooks at the top level
+- Don't call hooks conditionally
+- Use custom hooks to extract logic
+
+<CodeGroup>
+```typescript Good
+const useSurvey = (surveyId: string) => {
+  const [survey, setSurvey] = useState<Survey | null>(null);
+  
+  useEffect(() => {
+    fetchSurvey(surveyId).then(setSurvey);
+  }, [surveyId]);
+  
+  return survey;
+};
+```
+
+```typescript Bad
+const Component = ({ shouldFetch }) => {
+  if (shouldFetch) {
+    const data = useState(null); // Conditional hook!
+  }
+};
+```
+</CodeGroup>
+
+### Context Providers
+
+Guard against missing provider usage:
+
+```typescript
+import { createContext, useContext } from "react";
+
+const SurveyContext = createContext<SurveyContextType | null>(null);
+
+export const useSurveyContext = () => {
+  const context = useContext(SurveyContext);
+  if (!context) {
+    throw new Error("useSurveyContext must be used within SurveyProvider");
+  }
+  return context;
+};
+```
+
+### useEffect Cleanup
+
+Use cleanup patterns that snapshot refs:
+
+```typescript
+useEffect(() => {
+  const currentValue = someRef.current;
+  
+  return () => {
+    // Use currentValue instead of someRef.current
+    cleanup(currentValue);
+  };
+}, []);
+```
+
+## Formatting
+
+### ESLint and Prettier
+
+We use ESLint and Prettier for consistent formatting:
+
+```bash
+# Format code
+pnpm format
+
+# Lint and fix
+pnpm lint
+```
+
+### Code Style
+
+- **Indentation**: 2 spaces (no tabs)
+- **Line Length**: 110 characters max
+- **Quotes**: Double quotes
+- **Semicolons**: Always use semicolons
+- **Trailing Commas**: Use in multi-line
+
+### Import Organization
+
+Organize imports in this order:
+
+```typescript
+// 1. External libraries
+import { useState } from "react";
+import { prisma } from "@formbricks/database";
+
+// 2. Internal modules
+import { getSurvey } from "@/lib/survey/service";
+import { Button } from "@/components/ui/Button";
+
+// 3. Types
+import type { Survey } from "@formbricks/types/survey";
+
+// 4. Relative imports
+import { SurveyCard } from "./SurveyCard";
+import styles from "./styles.module.css";
+```
+
+## Error Handling
+
+### Server Actions
+
+Return consistent response format:
+
+```typescript
+import { z } from "zod";
+
+const schema = z.object({
+  name: z.string(),
+});
+
+export const createSurvey = async (data: unknown) => {
+  try {
+    const validated = schema.parse(data);
+    const survey = await surveyService.create(validated);
+    return { data: survey };
+  } catch (error) {
+    return { error: "Failed to create survey" };
+  }
+};
+```
+
+### Error Boundaries
+
+Use error boundaries for React errors:
+
+```typescript
+// app/error.tsx
+"use client";
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return (
+    <div>
+      <h2>Something went wrong!</h2>
+      <button onClick={reset}>Try again</button>
+    </div>
+  );
+}
+```
+
+### Validation with Zod
+
+Use Zod for runtime validation:
+
+```typescript
+import { z } from "zod";
+
+const surveySchema = z.object({
+  name: z.string().min(1).max(100),
+  status: z.enum(["draft", "active", "completed"]),
+  questions: z.array(questionSchema),
+});
+
+type Survey = z.infer<typeof surveySchema>;
+```
+
+## Database & Prisma
+
+### Multi-Tenancy
+
+Always scope queries by Organization or Environment:
+
+<CodeGroup>
+```typescript Good
+const surveys = await prisma.survey.findMany({
+  where: {
+    environmentId,
+    isActive: true,
+  },
+});
+```
+
+```typescript Bad
+const surveys = await prisma.survey.findMany();
+// Missing scope!
+```
+</CodeGroup>
+
+### Soft Deletion
+
+Check for soft deletion fields:
+
+```typescript
+const activeSurveys = await prisma.survey.findMany({
+  where: {
+    environmentId,
+    isActive: true,
+    deletedAt: null,
+  },
+});
+```
+
+### Performance
+
+**Never** use `skip`/`offset` with `count()`:
+
+<CodeGroup>
+```typescript Good
+const [surveys, count] = await Promise.all([
+  prisma.survey.findMany({
+    where: { environmentId },
+    take: 10,
+  }),
+  prisma.survey.count({
+    where: { environmentId },
+  }),
+]);
+```
+
+```typescript Bad
+const count = await prisma.response.count({
+  skip: 100,  // Don't use skip with count!
+  where: { surveyId },
+});
+```
+</CodeGroup>
+
+### Cursor Pagination
+
+Use cursor-based pagination for large datasets:
+
+```typescript
+const responses = await prisma.response.findMany({
+  where: { surveyId },
+  take: 50,
+  cursor: lastId ? { id: lastId } : undefined,
+  orderBy: { createdAt: "desc" },
+});
+```
+
+## Caching
+
+### React Cache
+
+Use React `cache()` for request-level deduplication:
+
+```typescript
+import { cache } from "react";
+
+export const getSurvey = cache(async (surveyId: string) => {
+  return await prisma.survey.findUnique({
+    where: { id: surveyId },
+  });
+});
+```
+
+### Redis Cache
+
+Use Redis for expensive operations:
+
+```typescript
+import { cache } from "@formbricks/cache";
+import { createCacheKey } from "@/lib/cache";
+
+const cacheKey = createCacheKey.survey(surveyId);
+const cached = await cache.get(cacheKey);
+
+if (cached) return cached;
+
+const survey = await fetchSurvey(surveyId);
+await cache.set(cacheKey, survey, 3600); // 1 hour TTL
+```
+
+### Cache Keys
+
+Always use `createCacheKey.*` utilities:
+
+```typescript
+import { createCacheKey } from "@/lib/cache";
+
+const surveyKey = createCacheKey.survey(surveyId);
+const responseKey = createCacheKey.response(responseId);
+```
+
+<Warning>
+Do not use Next.js `unstable_cache()`. Use React `cache()` or explicit Redis caching.
+</Warning>
+
+## Internationalization
+
+### Using Translations
+
+All user-facing text must use `t()` function:
+
+<CodeGroup>
+```typescript Good
+import { useTranslation } from "react-i18next";
+
+const Component = () => {
+  const { t } = useTranslation();
+  return <h1>{t("common.welcome")}</h1>;
+};
+```
+
+```typescript Bad
+const Component = () => {
+  return <h1>Welcome</h1>; // Hardcoded text!
+};
+```
+</CodeGroup>
+
+### Translation Keys
+
+Use lowercase with dots for nesting:
+
+```json
+{
+  "common": {
+    "welcome": "Welcome",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "survey": {
+    "create": "Create Survey",
+    "delete": "Delete Survey"
+  }
+}
+```
+
+## Comments and Documentation
+
+### JSDoc Comments
+
+Add JSDoc for complex functions:
+
+```typescript
+/**
+ * Calculates the average response time for a survey
+ * 
+ * @param surveyId - The survey ID
+ * @param startDate - Optional start date for filtering
+ * @returns Average response time in seconds
+ */
+export const calculateAverageResponseTime = async (
+  surveyId: string,
+  startDate?: Date
+): Promise<number> => {
+  // Implementation
+};
+```
+
+### Inline Comments
+
+Add comments for non-obvious code:
+
+```typescript
+// Calculate cache TTL based on survey status
+// Active surveys: 5 min, Draft: 1 hour, Completed: 24 hours
+const ttl = survey.status === "active" ? 300 : 
+            survey.status === "draft" ? 3600 : 86400;
+```
+
+### TODO Comments
+
+Use TODO for future improvements:
+
+```typescript
+// TODO: Add pagination support
+// TODO: Optimize query performance
+// TODO(username): Handle edge case for archived surveys
+```
+
+## Best Practices
+
+### Keep Functions Small
+
+Each function should do one thing well:
+
+<CodeGroup>
+```typescript Good
+const validateSurvey = (survey: Survey) => { ... };
+const saveSurvey = (survey: Survey) => { ... };
+const notifyUsers = (surveyId: string) => { ... };
+
+const createSurvey = async (data: unknown) => {
+  const survey = validateSurvey(data);
+  await saveSurvey(survey);
+  await notifyUsers(survey.id);
+};
+```
+
+```typescript Bad
+const createSurvey = async (data: unknown) => {
+  // 100 lines of validation, saving, and notification logic
+};
+```
+</CodeGroup>
+
+### Remove Dead Code
+
+Delete unused code instead of commenting it out:
+
+<CodeGroup>
+```typescript Good
+// Code removed - use git history if needed
+const activeFn = () => { ... };
+```
+
+```typescript Bad
+// const oldFn = () => { ... };
+// const anotherOldFn = () => { ... };
+const activeFn = () => { ... };
+```
+</CodeGroup>
+
+### Avoid Deep Nesting
+
+Use early returns to reduce nesting:
+
+<CodeGroup>
+```typescript Good
+const processSurvey = (survey: Survey | null) => {
+  if (!survey) return null;
+  if (!survey.isActive) return null;
+  if (survey.responses.length === 0) return null;
+  
+  return analyzeSurvey(survey);
+};
+```
+
+```typescript Bad
+const processSurvey = (survey: Survey | null) => {
+  if (survey) {
+    if (survey.isActive) {
+      if (survey.responses.length > 0) {
+        return analyzeSurvey(survey);
+      }
+    }
+  }
+  return null;
+};
+```
+</CodeGroup>
+
+### Use Const by Default
+
+Prefer `const` over `let`:
+
+```typescript
+const surveys = await getSurveys(); // Immutable reference
+let count = 0; // Only when mutation is needed
+```
+
+### Destructure Objects
+
+Use destructuring for cleaner code:
+
+<CodeGroup>
+```typescript Good
+const { name, status, questions } = survey;
+```
+
+```typescript Verbose
+const name = survey.name;
+const status = survey.status;
+const questions = survey.questions;
+```
+</CodeGroup>
+
+## Testing Considerations
+
+Write testable code:
+
+- **Pure functions**: Easier to test
+- **Dependency injection**: Mock dependencies
+- **Single responsibility**: Test one thing
+
+```typescript
+// Testable: Pure function with no side effects
+const calculateScore = (responses: Response[]): number => {
+  return responses.reduce((sum, r) => sum + r.score, 0);
+};
+
+// Also testable: Clear dependencies
+const createSurvey = async (
+  data: CreateSurveyInput,
+  db: PrismaClient = prisma
+) => {
+  return await db.survey.create({ data });
+};
+```
+
+See [Testing Standards](/development/standards/testing) for more details.
+
+## SonarQube
+
+We use SonarQube to identify code smells and security hotspots. Address SonarQube findings before submitting PRs.
+
+## Pre-commit Hooks
+
+We use Husky and lint-staged for pre-commit checks:
+
+```json
+{
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": ["prettier --write"],
+    "*.json": ["prettier --write"],
+    "schema.prisma": ["prisma format"]
+  }
+}
+```
+
+These run automatically on commit.
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Testing Standards" icon="flask" href="/development/standards/testing">
+    Learn how to write tests
+  </Card>
+  <Card title="Documentation Standards" icon="book" href="/development/standards/documentation">
+    Write great documentation
+  </Card>
+  <Card title="Contributing Guide" icon="heart" href="/development/contributing">
+    Contribution guidelines
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/development/architecture">
+    Understand the architecture
+  </Card>
+</CardGroup>

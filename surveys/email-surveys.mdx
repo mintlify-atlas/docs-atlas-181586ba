@@ -1,0 +1,572 @@
+---
+title: 'Email Surveys'
+description: 'Send surveys directly via email and embed them in email campaigns'
+icon: 'envelope'
+---
+
+Email surveys allow you to send Formbricks surveys directly via email or embed them in your email campaigns. Recipients can complete surveys without leaving their inbox.
+
+## How Email Surveys Work
+
+Email surveys are essentially link surveys packaged for email delivery. They can be:
+
+1. **Embedded in email** - Survey rendered directly in the email body (HTML)
+2. **Linked from email** - Button or link that opens survey in browser
+3. **Sent as preview** - Test email delivery before full campaign
+
+```typescript
+// Email surveys are link-type surveys
+interface TSurvey {
+  type: "link"; // Always "link" for email surveys
+  metadata?: TSurveyMetadata;
+}
+
+interface TSurveyMetadata {
+  title?: TI18nString;
+  description?: TI18nString;
+  ogImage?: string;
+}
+```
+
+## Setup Email Delivery
+
+Email surveys require email configuration in your Formbricks instance.
+
+<Steps>
+  <Step title="Configure email service">
+    Set up SMTP or email service provider in your Formbricks environment variables:
+    
+    ```bash
+    MAIL_FROM=surveys@yourcompany.com
+    SMTP_HOST=smtp.sendgrid.net
+    SMTP_PORT=587
+    SMTP_USER=apikey
+    SMTP_PASSWORD=your-api-key
+    ```
+  </Step>
+  
+  <Step title="Create a link survey">
+    Email surveys must be **Link** type surveys. Create your survey in the Formbricks dashboard.
+  </Step>
+  
+  <Step title="Access email options">
+    Navigate to **Summary** tab and click **Share** → **Email** tab.
+  </Step>
+</Steps>
+
+## Email Embed Methods
+
+### Method 1: Full HTML Embed
+
+Embed the complete survey directly in your email:
+
+<Steps>
+  <Step title="Generate HTML">
+    In the Email tab, click **Embed Code** to view the full HTML.
+  </Step>
+  
+  <Step title="Copy HTML">
+    Copy the generated HTML code.
+  </Step>
+  
+  <Step title="Paste in email editor">
+    Paste into your email service provider's HTML editor.
+  </Step>
+</Steps>
+
+```html
+<!-- Generated email HTML example -->
+<div style="max-width: 600px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+  <div style="background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 24px;">
+    <h2 style="margin: 0 0 16px; font-size: 20px; color: #111827;">
+      How was your experience?
+    </h2>
+    <p style="margin: 0 0 24px; color: #6b7280; font-size: 14px;">
+      We'd love to hear your feedback!
+    </p>
+    
+    <!-- Survey questions rendered as interactive HTML -->
+    <div class="fb-question">
+      <!-- Question content -->
+    </div>
+    
+    <a href="https://your-domain.com/s/survey-id" 
+       style="display: inline-block; background: #00C4B8; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px;">
+      Complete Survey
+    </a>
+  </div>
+</div>
+```
+
+<Warning>
+**Email client compatibility**: Not all email clients support interactive HTML. Always include a fallback link.
+</Warning>
+
+### Method 2: CTA Button Link
+
+Add a call-to-action button that opens the survey:
+
+```html
+<!-- Simple CTA approach -->
+<table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr>
+    <td align="center" style="padding: 20px;">
+      <a href="https://your-domain.com/s/survey-id?source=email&campaign=nps-q1" 
+         style="display: inline-block; background: #00C4B8; color: white; padding: 14px 32px; text-decoration: none; border-radius: 6px; font-family: -apple-system, sans-serif; font-weight: 600; font-size: 16px;">
+        Share Your Feedback
+      </a>
+    </td>
+  </tr>
+</table>
+```
+
+### Method 3: Plain Text Link
+
+For plain text emails:
+
+```text
+We'd love to hear from you!
+
+Please take 2 minutes to complete our survey:
+https://your-domain.com/s/survey-id?source=email
+
+Thank you!
+The Team
+```
+
+## Send Preview Email
+
+Test email delivery before sending to your full list:
+
+<Steps>
+  <Step title="Navigate to Email tab">
+    In the Share modal, select the **Email** tab.
+  </Step>
+  
+  <Step title="Review preview">
+    View how the email will appear in the **Preview** tab.
+  </Step>
+  
+  <Step title="Send test">
+    Click **Send Preview** to receive a test email.
+  </Step>
+</Steps>
+
+The preview email is sent to your Formbricks account email address.
+
+```typescript
+// Preview email implementation
+const sendPreviewEmail = async (surveyId: string) => {
+  const result = await sendEmbedSurveyPreviewEmailAction({ surveyId });
+  
+  if (result?.data) {
+    toast.success("Email sent successfully");
+  } else {
+    toast.error("Failed to send email");
+  }
+};
+```
+
+## Email Campaign Integration
+
+### Mailchimp
+
+<Steps>
+  <Step title="Create campaign">
+    Start a new email campaign in Mailchimp.
+  </Step>
+  
+  <Step title="Add HTML block">
+    Insert a **Code** block in your email template.
+  </Step>
+  
+  <Step title="Paste survey HTML">
+    Copy the Formbricks email HTML and paste it into the code block.
+  </Step>
+  
+  <Step title="Add merge tags">
+    Personalize with Mailchimp merge tags:
+    
+    ```html
+    <p>Hi *|FNAME|*,</p>
+    <a href="https://your-domain.com/s/survey-id?email=*|EMAIL|*&subscriber_id=*|UNIQID|*">
+      Take Survey
+    </a>
+    ```
+  </Step>
+</Steps>
+
+### SendGrid
+
+```html
+<!-- SendGrid dynamic template example -->
+<div class="survey-container">
+  <p>Hello {{firstName}},</p>
+  
+  <a href="https://your-domain.com/s/survey-id?email={{email}}&user_id={{userId}}" 
+     class="cta-button">
+    Share Your Feedback
+  </a>
+</div>
+```
+
+### Customer.io
+
+```liquid
+<!-- Customer.io liquid template -->
+<div>
+  <p>Hi {{ customer.first_name }},</p>
+  
+  <a href="https://your-domain.com/s/survey-id?email={{ customer.email }}&cio_id={{ customer.id }}">
+    Complete Survey
+  </a>
+</div>
+```
+
+## Personalization with Hidden Fields
+
+Pass user data via URL parameters to personalize surveys:
+
+```html
+<a href="https://your-domain.com/s/survey-id?email={{email}}&name={{first_name}}&plan={{subscription_plan}}&source=email&campaign=satisfaction-q1">
+  Take Survey
+</a>
+```
+
+Define these as hidden fields in your survey to capture the data:
+
+```typescript
+const survey = {
+  hiddenFields: {
+    enabled: true,
+    fieldIds: ["email", "name", "plan", "source", "campaign"]
+  }
+};
+```
+
+## Single-Use Email Links
+
+Ensure each recipient can only respond once:
+
+<Steps>
+  <Step title="Enable single-use links">
+    In survey settings, enable **Single-Use Links**.
+  </Step>
+  
+  <Step title="Generate unique IDs">
+    Create a unique ID for each recipient in your email list.
+  </Step>
+  
+  <Step title="Include in email">
+    Add the unique ID to each survey link:
+    
+    ```html
+    <a href="https://your-domain.com/s/survey-id?suId={{unique_recipient_id}}">
+      Take Survey
+    </a>
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+Use your email service provider's unique subscriber ID as the single-use ID for easy tracking.
+</Tip>
+
+## Email Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep it short" icon="scissors">
+    Limit surveys sent via email to 3-5 questions maximum. Longer surveys should use a link to open in browser.
+  </Accordion>
+  
+  <Accordion title="Subject line matters" icon="envelope">
+    Use clear, compelling subject lines:
+    
+    - ✅ "Quick question about your recent purchase"
+    - ✅ "2-minute survey: How are we doing?"
+    - ❌ "Survey"
+    - ❌ "We need your feedback"
+  </Accordion>
+  
+  <Accordion title="Timing is crucial" icon="clock">
+    Send surveys at optimal times:
+    
+    - **B2B**: Tuesday-Thursday, 10am-2pm
+    - **B2C**: Evenings and weekends
+    - **Post-purchase**: 3-7 days after transaction
+    - **Post-support**: Within 24 hours of resolution
+  </Accordion>
+  
+  <Accordion title="Mobile-first design" icon="mobile">
+    Over 60% of emails are opened on mobile devices:
+    
+    - Use large, tappable buttons (minimum 44x44px)
+    - Test on multiple email clients
+    - Keep text concise and scannable
+    - Use single-column layout
+  </Accordion>
+  
+  <Accordion title="Include unsubscribe option" icon="ban">
+    Always provide a way to opt-out of survey emails:
+    
+    ```html
+    <p style="font-size: 12px; color: #6b7280; margin-top: 24px;">
+      Don't want to receive surveys? 
+      <a href="{{unsubscribe_url}}" style="color: #6b7280;">Unsubscribe</a>
+    </p>
+    ```
+  </Accordion>
+  
+  <Accordion title="A/B test send times" icon="flask">
+    Test different send times and subject lines to optimize response rates.
+  </Accordion>
+</AccordionGroup>
+
+## Tracking Email Performance
+
+Monitor your email survey campaigns:
+
+### Response Rate
+
+Track responses using hidden fields:
+
+```html
+<a href="https://your-domain.com/s/survey-id?source=email&campaign_id=spring-nps-2024&send_date=2024-03-15">
+  Take Survey
+</a>
+```
+
+Analyze in Formbricks:
+- Filter responses by `source=email`
+- Group by `campaign_id`
+- Compare response rates across send dates
+
+### Email Client Tracking
+
+Identify which email clients your respondents use:
+
+```html
+<!-- Add email client as hidden field -->
+<a href="https://your-domain.com/s/survey-id?email_client={{client_type}}">
+  Take Survey
+</a>
+```
+
+## Email Client Compatibility
+
+| Email Client | HTML Support | Interactive Elements | Recommended Approach |
+|--------------|--------------|---------------------|----------------------|
+| Gmail | ✅ Good | ⚠️ Limited | Embed with fallback link |
+| Outlook | ⚠️ Limited | ❌ None | CTA button only |
+| Apple Mail | ✅ Excellent | ✅ Good | Full embed |
+| Yahoo Mail | ✅ Good | ⚠️ Limited | Embed with fallback |
+| Mobile Gmail | ✅ Good | ⚠️ Limited | CTA button recommended |
+| Outlook Mobile | ⚠️ Limited | ❌ None | CTA button only |
+
+<Note>
+Always include a fallback link to ensure all recipients can access the survey regardless of email client.
+</Note>
+
+## Automated Email Triggers
+
+Integrate with your backend to send surveys automatically:
+
+```typescript
+// Example: Send NPS survey 7 days after signup
+import { sendEmail } from './email-service';
+
+interface User {
+  email: string;
+  firstName: string;
+  signupDate: Date;
+}
+
+async function sendNPSSurvey(user: User) {
+  const daysSinceSignup = 
+    (Date.now() - user.signupDate.getTime()) / (1000 * 60 * 60 * 24);
+  
+  if (daysSinceSignup >= 7) {
+    const surveyUrl = 
+      `https://your-domain.com/s/nps-survey?` +
+      `email=${encodeURIComponent(user.email)}&` +
+      `name=${encodeURIComponent(user.firstName)}&` +
+      `source=automated&` +
+      `trigger=day7`;
+    
+    await sendEmail({
+      to: user.email,
+      subject: `${user.firstName}, how's your experience so far?`,
+      html: `
+        <p>Hi ${user.firstName},</p>
+        <p>You've been using our product for a week now. We'd love to hear your thoughts!</p>
+        <a href="${surveyUrl}" style="...">
+          Share Your Feedback
+        </a>
+      `
+    });
+  }
+}
+```
+
+## Compliance and Privacy
+
+<AccordionGroup>
+  <Accordion title="GDPR Compliance" icon="shield-check">
+    For EU recipients:
+    
+    - Obtain consent before sending surveys
+    - Include privacy policy link
+    - Allow opt-out from future surveys
+    - Honor data deletion requests
+    
+    ```html
+    <p style="font-size: 11px; color: #9ca3af;">
+      By completing this survey, you agree to our 
+      <a href="https://yoursite.com/privacy">Privacy Policy</a>.
+    </p>
+    ```
+  </Accordion>
+  
+  <Accordion title="CAN-SPAM Compliance" icon="flag-usa">
+    For US recipients:
+    
+    - Include physical mailing address
+    - Provide clear unsubscribe mechanism
+    - Don't use deceptive subject lines
+    - Honor opt-out requests within 10 days
+  </Accordion>
+  
+  <Accordion title="CASL Compliance" icon="flag">
+    For Canadian recipients:
+    
+    - Obtain explicit consent
+    - Clearly identify your organization
+    - Provide contact information
+    - Include unsubscribe mechanism
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Emails not sending" icon="circle-exclamation">
+    - Verify SMTP configuration in environment variables
+    - Check email service provider status
+    - Review sending limits and quotas
+    - Test with a simple email first
+  </Accordion>
+  
+  <Accordion title="Survey not rendering in email" icon="image">
+    - Check HTML validity
+    - Test in multiple email clients
+    - Ensure CSS is inline (not external)
+    - Provide fallback link
+  </Accordion>
+  
+  <Accordion title="Low response rates" icon="chart-line-down">
+    - Shorten the survey
+    - Improve subject line
+    - Test different send times
+    - Add incentive or urgency
+    - Personalize the message
+  </Accordion>
+  
+  <Accordion title="Hidden fields not capturing" icon="eye-slash">
+    - Verify URL parameter names match field IDs
+    - Check for URL encoding issues
+    - Ensure hidden fields are enabled in survey
+    - Test the full URL manually
+  </Accordion>
+</AccordionGroup>
+
+## Example: Complete Email Campaign
+
+Here's a complete example of an NPS email survey:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>We'd love your feedback</title>
+</head>
+<body style="margin: 0; padding: 0; background: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+    <tr>
+      <td align="center" style="padding: 40px 20px;">
+        <table width="600" cellpadding="0" cellspacing="0" border="0" style="background: white; border-radius: 8px; overflow: hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="padding: 32px 32px 24px; border-bottom: 1px solid #e5e7eb;">
+              <img src="https://yoursite.com/logo.png" alt="Company Logo" width="120">
+            </td>
+          </tr>
+          
+          <!-- Content -->
+          <tr>
+            <td style="padding: 32px;">
+              <h1 style="margin: 0 0 16px; font-size: 24px; color: #111827;">
+                How likely are you to recommend us?
+              </h1>
+              <p style="margin: 0 0 24px; color: #6b7280; font-size: 16px; line-height: 1.5;">
+                Hi {{firstName}}, your opinion matters to us. Please take a moment to share your experience.
+              </p>
+              
+              <!-- CTA Button -->
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="border-radius: 6px; background: #00C4B8;">
+                    <a href="https://your-domain.com/s/nps-survey?email={{email}}&name={{firstName}}&user_id={{userId}}&source=email&campaign=nps-q1-2024" 
+                       style="display: inline-block; padding: 14px 32px; color: white; text-decoration: none; font-weight: 600; font-size: 16px;">
+                      Take 1-Minute Survey
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              
+              <p style="margin: 24px 0 0; color: #9ca3af; font-size: 14px;">
+                This will only take about 60 seconds of your time.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 32px; background: #f9fafb; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0 0 8px; color: #6b7280; font-size: 12px;">
+                © 2024 Your Company. All rights reserved.
+              </p>
+              <p style="margin: 0; color: #9ca3af; font-size: 11px;">
+                <a href="{{unsubscribe_url}}" style="color: #9ca3af;">Unsubscribe</a> | 
+                <a href="https://yoursite.com/privacy" style="color: #9ca3af;">Privacy Policy</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+```
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="Link Surveys" icon="link" href="/surveys/link-surveys">
+    Learn more about link survey features
+  </Card>
+  
+  <Card title="Hidden Fields" icon="eye-slash" href="/surveys/features/hidden-fields">
+    Track additional data with hidden fields
+  </Card>
+  
+  <Card title="Email Configuration" icon="gear" href="/self-hosting/configuration/email">
+    Configure email service for self-hosted instances
+  </Card>
+  
+  <Card title="Webhooks" icon="webhook" href="/surveys/features/webhooks">
+    Automate actions when responses are received
+  </Card>
+</CardGroup>

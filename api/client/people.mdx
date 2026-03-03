@@ -1,0 +1,461 @@
+---
+title: People API
+description: Identify users and manage contact attributes from client applications
+icon: "user"
+---
+
+The People API (also called User API) allows you to identify users and update their attributes from your client application. This enables user tracking and targeted surveys.
+
+<Note>
+  User identification is an Enterprise feature. Free and Pro plans will receive a `403 Forbidden` response when attempting to identify users.
+</Note>
+
+## Identify a User
+
+Identify a user and optionally set or update their attributes.
+
+```
+POST /api/v1/client/{environmentId}/user
+```
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://app.formbricks.com/api/v1/client/{environmentId}/user \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "user_123",
+    "attributes": {
+      "email": "user@example.com",
+      "name": "John Doe",
+      "plan": "enterprise",
+      "signupDate": "2024-01-15"
+    }
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/client/env_123/user',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      userId: 'user_123',
+      attributes: {
+        email: 'user@example.com',
+        name: 'John Doe',
+        plan: 'enterprise',
+        signupDate: '2024-01-15'
+      }
+    })
+  }
+);
+
+const contact = await response.json();
+```
+
+```typescript TypeScript
+interface UserAttributes {
+  email?: string;
+  name?: string;
+  [key: string]: string | undefined;
+}
+
+interface IdentifyUserParams {
+  userId: string;
+  attributes?: UserAttributes;
+}
+
+async function identifyUser(params: IdentifyUserParams) {
+  const response = await fetch(
+    `https://app.formbricks.com/api/v1/client/env_123/user`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    }
+  );
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message);
+  }
+  
+  return response.json();
+}
+
+// Usage
+await identifyUser({
+  userId: 'user_123',
+  attributes: {
+    email: 'user@example.com',
+    name: 'John Doe',
+    plan: 'enterprise'
+  }
+});
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="environmentId" type="string" required>
+  Your Formbricks environment ID
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="userId" type="string" required>
+  Your unique identifier for this user (must be consistent across your application)
+</ParamField>
+
+<ParamField body="attributes" type="object">
+  Contact attributes to set or update (all values must be strings)
+</ParamField>
+
+### Response
+
+Returns the created or updated contact object:
+
+```json
+{
+  "id": "con_...",
+  "createdAt": "2021-01-01T00:00:00.000Z",
+  "updatedAt": "2021-01-01T00:00:00.000Z",
+  "environmentId": "env_...",
+  "userId": "user_123",
+  "attributes": {
+    "email": "user@example.com",
+    "name": "John Doe",
+    "plan": "enterprise",
+    "signupDate": "2024-01-15"
+  }
+}
+```
+
+<ResponseField name="id" type="string">
+  Formbricks contact ID
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of when the contact was created
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of when the contact was last updated
+</ResponseField>
+
+<ResponseField name="environmentId" type="string">
+  The environment this contact belongs to
+</ResponseField>
+
+<ResponseField name="userId" type="string">
+  Your unique identifier for this user
+</ResponseField>
+
+<ResponseField name="attributes" type="object">
+  All attributes associated with this contact
+</ResponseField>
+
+## Use Cases
+
+### Identify Users at Login
+
+Identify users when they log in to your application:
+
+```javascript
+// After successful login
+async function handleLogin(user) {
+  // Your login logic...
+  
+  // Identify user in Formbricks
+  await fetch('https://app.formbricks.com/api/v1/client/env_123/user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId: user.id,
+      attributes: {
+        email: user.email,
+        name: user.name,
+        plan: user.subscription.plan,
+        accountType: user.accountType
+      }
+    })
+  });
+}
+```
+
+### Update Attributes on Change
+
+Update user attributes when they change in your application:
+
+```javascript
+// When user upgrades their plan
+async function handlePlanUpgrade(userId, newPlan) {
+  // Update in your database...
+  
+  // Update in Formbricks
+  await fetch('https://app.formbricks.com/api/v1/client/env_123/user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      userId: userId,
+      attributes: {
+        plan: newPlan,
+        upgradedAt: new Date().toISOString()
+      }
+    })
+  });
+}
+```
+
+### Progressive Attribute Building
+
+Build up user attributes over time as you learn more:
+
+```javascript
+// Initial identification
+await identifyUser({
+  userId: 'user_123',
+  attributes: {
+    email: 'user@example.com'
+  }
+});
+
+// Later, add more attributes
+await identifyUser({
+  userId: 'user_123',
+  attributes: {
+    company: 'Acme Corp',
+    role: 'Product Manager'
+  }
+});
+
+// Attributes are merged, not replaced
+```
+
+## Attribute Management
+
+### Attribute Merging
+
+When you identify a user multiple times, attributes are merged:
+
+```javascript
+// First call
+await identifyUser({
+  userId: 'user_123',
+  attributes: {
+    email: 'user@example.com',
+    name: 'John Doe'
+  }
+});
+// Result: { email, name }
+
+// Second call
+await identifyUser({
+  userId: 'user_123',
+  attributes: {
+    plan: 'pro',
+    name: 'John Smith' // Updated
+  }
+});
+// Result: { email, name: 'John Smith', plan }
+```
+
+### Attribute Types
+
+All attribute values must be strings:
+
+```javascript
+// ✅ Correct
+await identifyUser({
+  userId: 'user_123',
+  attributes: {
+    plan: 'pro',
+    accountAge: '30',
+    isActive: 'true'
+  }
+});
+
+// ❌ Incorrect - numbers and booleans not allowed
+await identifyUser({
+  userId: 'user_123',
+  attributes: {
+    accountAge: 30, // Should be '30'
+    isActive: true  // Should be 'true'
+  }
+});
+```
+
+### Common Attributes
+
+Recommended attributes for most applications:
+
+- `email` - User's email address
+- `name` - User's full name
+- `firstName` - User's first name
+- `lastName` - User's last name
+- `plan` - Subscription plan
+- `role` - User role
+- `company` - Company name
+- `department` - Department
+- `signupDate` - When the user signed up
+- `lastSeenAt` - When the user was last active
+
+## Targeting Surveys by Attributes
+
+Once you've identified users and set attributes, you can target surveys to specific segments:
+
+### In Formbricks Dashboard
+
+Create audience segments based on attributes:
+
+- Show survey only to users where `plan = 'enterprise'`
+- Target users where `role = 'admin'`
+- Exclude users where `lastSeenAt > 30 days ago`
+
+### Attribute-Based Survey Logic
+
+```javascript
+// Identify user
+await identifyUser({
+  userId: 'user_123',
+  attributes: {
+    plan: 'free',
+    trialDaysLeft: '3'
+  }
+});
+
+// Formbricks can now show surveys targeting:
+// - Free plan users
+// - Users with trial ending soon
+// - etc.
+```
+
+## Integration with Response API
+
+When a user submits a response, their attributes are automatically included:
+
+```javascript
+// 1. Identify user
+await identifyUser({
+  userId: 'user_123',
+  attributes: {
+    email: 'user@example.com',
+    plan: 'pro'
+  }
+});
+
+// 2. Submit response with userId
+await fetch('https://app.formbricks.com/api/v1/client/env_123/responses', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    surveyId: 'srv_456',
+    userId: 'user_123',
+    finished: true,
+    data: { qst_1: 'answer' }
+  })
+});
+
+// 3. Response includes contact attributes
+// Response object will have:
+// {
+//   "contactId": "con_...",
+//   "contactAttributes": {
+//     "email": "user@example.com",
+//     "plan": "pro"
+//   },
+//   ...
+// }
+```
+
+## CORS Support
+
+The People API supports CORS for browser-based applications:
+
+```
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: POST, OPTIONS
+Access-Control-Allow-Headers: Content-Type
+```
+
+Preflight `OPTIONS` requests are cached for 1 hour.
+
+## Error Responses
+
+### Enterprise Feature Required
+
+Non-Enterprise plans receive:
+
+```json
+{
+  "message": "User identification is only available for enterprise users."
+}
+```
+
+### Invalid Request
+
+```json
+{
+  "message": "Fields are missing or incorrectly formatted",
+  "details": {
+    "userId": "Required field"
+  }
+}
+```
+
+### Invalid Environment
+
+```json
+{
+  "message": "Environment not found"
+}
+```
+
+## Best Practices
+
+1. **Consistent User IDs**: Always use the same `userId` for a user across your application
+2. **Identify Early**: Identify users as soon as they log in
+3. **Keep Attributes Updated**: Update attributes when they change in your system
+4. **Minimal Attributes**: Only store attributes you'll actually use
+5. **String Values**: Always convert attribute values to strings
+6. **Privacy Compliance**: Ensure you have permission to track and store user data
+7. **Handle Errors**: Gracefully handle cases where user identification fails
+
+## Privacy Considerations
+
+<Warning>
+  Always ensure you have proper consent and comply with privacy regulations (GDPR, CCPA, etc.) when identifying users and storing their attributes.
+</Warning>
+
+- Only store attributes you need
+- Provide users with ability to opt-out
+- Honor data deletion requests
+- Don't store sensitive information (passwords, credit cards, etc.)
+- Be transparent about what data you're collecting
+
+## Integration with Formbricks SDK
+
+If you're using the Formbricks JavaScript SDK, user identification is simplified:
+
+```javascript
+import formbricks from '@formbricks/js';
+
+formbricks.init({
+  environmentId: 'env_123',
+  apiHost: 'https://app.formbricks.com',
+  userId: 'user_123',
+  attributes: {
+    email: 'user@example.com',
+    plan: 'pro'
+  }
+});
+
+// Update attributes later
+formbricks.setUserId('user_123');
+formbricks.setAttribute('plan', 'enterprise');
+```
+
+The SDK handles the API calls for you and manages the user state.

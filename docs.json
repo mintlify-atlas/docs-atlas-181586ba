@@ -1,122 +1,195 @@
 {
   "$schema": "https://mintlify.com/docs.json",
+  "name": "Formbricks",
   "theme": "mint",
-  "name": "Mint Starter Kit",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#00C4B8",
+    "light": "#00C4B8",
+    "dark": "#00C4B8"
   },
-  "favicon": "/favicon.svg",
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/formbricks/formbricks"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/formbricks/formbricks",
+      "x": "https://x.com/formbricks",
+      "linkedin": "https://linkedin.com/company/formbricks"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Overview",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "what-is-formbricks",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
-            ]
-          },
-          {
-            "group": "Writing content",
-            "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "concepts/surveys",
+              "concepts/environments",
+              "concepts/contacts",
+              "concepts/responses"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "Surveys",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Survey Types",
             "pages": [
-              "api-reference/introduction"
+              "surveys/link-surveys",
+              "surveys/website-surveys",
+              "surveys/app-surveys",
+              "surveys/email-surveys"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Question Types",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "surveys/questions/open-text",
+              "surveys/questions/single-select",
+              "surveys/questions/multi-select",
+              "surveys/questions/rating",
+              "surveys/questions/nps",
+              "surveys/questions/file-upload",
+              "surveys/questions/date",
+              "surveys/questions/matrix"
+            ]
+          },
+          {
+            "group": "Features",
+            "pages": [
+              "surveys/features/conditional-logic",
+              "surveys/features/multi-language",
+              "surveys/features/custom-styling",
+              "surveys/features/hidden-fields",
+              "surveys/features/webhooks"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Integration",
+        "groups": [
+          {
+            "group": "SDK Setup",
+            "pages": [
+              "integration/javascript",
+              "integration/react",
+              "integration/nextjs",
+              "integration/vue",
+              "integration/flutter"
+            ]
+          },
+          {
+            "group": "Integrations",
+            "pages": [
+              "integrations/overview",
+              "integrations/slack",
+              "integrations/zapier",
+              "integrations/notion",
+              "integrations/google-sheets"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Self-Hosting",
+        "groups": [
+          {
+            "group": "Deployment",
+            "pages": [
+              "self-hosting/overview",
+              "self-hosting/docker",
+              "self-hosting/kubernetes",
+              "self-hosting/railway"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "self-hosting/configuration/environment-variables",
+              "self-hosting/configuration/email",
+              "self-hosting/configuration/storage",
+              "self-hosting/configuration/authentication"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "self-hosting/advanced/enterprise-features",
+              "self-hosting/advanced/ssl-certificates",
+              "self-hosting/advanced/scaling",
+              "self-hosting/advanced/monitoring"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "api/overview",
+              "api/authentication",
+              "api/rate-limits"
+            ]
+          },
+          {
+            "group": "Management API",
+            "pages": [
+              "api/surveys",
+              "api/responses",
+              "api/contacts",
+              "api/webhooks"
+            ]
+          },
+          {
+            "group": "Client API",
+            "pages": [
+              "api/client/display",
+              "api/client/response",
+              "api/client/people"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Contributing",
+            "pages": [
+              "development/overview",
+              "development/local-setup",
+              "development/architecture",
+              "development/contributing"
+            ]
+          },
+          {
+            "group": "Standards",
+            "pages": [
+              "development/standards/code-style",
+              "development/standards/testing",
+              "development/standards/documentation"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

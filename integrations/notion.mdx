@@ -1,0 +1,279 @@
+---
+title: Notion Integration
+description: Automatically sync survey responses to Notion databases with Formbricks.
+---
+
+The Notion integration allows you to automatically add survey responses as pages in Notion databases. Perfect for organizing feedback, building roadmaps, or creating customer insights repositories.
+
+## What Gets Synced
+
+When a response is submitted to a linked survey:
+
+- Each response creates a new page in your Notion database
+- Survey questions are mapped to database properties
+- Data syncs in real-time as responses arrive
+- You control which questions map to which properties
+
+## Setup for Formbricks Cloud
+
+<Steps>
+  <Step title="Navigate to Integrations">
+    In your Formbricks dashboard, go to **Configuration** > **Integrations** and click **Connect** on the Notion card.
+    
+    ![Formbricks Integrations Tab](/images/xm-and-surveys/core-features/integrations/notion/integrations-tab.webp)
+  </Step>
+
+  <Step title="Connect with Notion">
+    Click **Connect with Notion** to start the OAuth flow.
+    
+    ![Connect Formbricks with your Notion account](/images/xm-and-surveys/core-features/integrations/notion/connect-with-notion.webp)
+  </Step>
+
+  <Step title="Authorize and Select Databases">
+    On the Notion OAuth page:
+    1. Select your Notion workspace
+    2. Choose which databases Formbricks can access
+    3. Click **Allow access**
+  </Step>
+
+  <Step title="Confirm Connection">
+    After authorization, you'll return to Formbricks and see a connected status.
+    
+    ![Formbricks is now connected with Notion](/images/xm-and-surveys/core-features/integrations/notion/notion-connected.webp)
+  </Step>
+
+  <Step title="Prepare Your Database">
+    Ensure your Notion database has:
+    - Properties that match your survey questions
+    - Appropriate property types (text, select, number, etc.)
+    - Shared access with the Formbricks integration
+  </Step>
+
+  <Step title="Link a Database">
+    Click **Link New Database** to open the configuration modal.
+    
+    ![Link Formbricks with a Notion database](/images/xm-and-surveys/core-features/integrations/notion/link-survey-with-database.webp)
+  </Step>
+
+  <Step title="Map Questions to Properties">
+    1. Select the Notion database
+    2. Select the survey
+    3. Map each survey question to a database property
+    4. Click **Link Database**
+    
+    ![Question to notion database column mapping](/images/xm-and-surveys/core-features/integrations/notion/link-with-databases.webp)
+  </Step>
+
+  <Step title="Verify Setup">
+    Your linked database appears in the list. Responses will now automatically create Notion pages!
+    
+    ![List of linked notion databases](/images/xm-and-surveys/core-features/integrations/notion/list-linked-databases.webp)
+  </Step>
+</Steps>
+
+## Self-Hosted Setup
+
+To enable Notion integration on a self-hosted instance:
+
+<Steps>
+  <Step title="Create Notion Integration">
+    1. Sign in to [Notion](https://www.notion.so/)
+    2. Go to [My integrations](https://www.notion.so/my-integrations)
+    3. Click **New integration**
+    4. Fill in the basic information (name, logo)
+    5. Click **Submit**
+  </Step>
+
+  <Step title="Enable Public Distribution">
+    1. Click the **Distribution** tab
+    2. Toggle **Make integration public**
+    3. A form will appear below
+  </Step>
+
+  <Step title="Configure Redirect URI">
+    Under **Redirect URIs**, add:
+    
+    ```
+    https://<your-domain>/api/v1/integrations/notion/callback
+    ```
+    
+    For local development:
+    ```
+    http://localhost:3000/api/v1/integrations/notion/callback
+    ```
+  </Step>
+
+  <Step title="Complete Distribution Form">
+    Fill in all required fields, then click **Submit**.
+  </Step>
+
+  <Step title="Copy Credentials">
+    After submission, copy:
+    - **Client ID**
+    - **Client Secret**
+  </Step>
+
+  <Step title="Set Environment Variables">
+    Add to your Formbricks `.env` file:
+    
+    ```bash
+    NOTION_OAUTH_CLIENT_ID=<your-client-id>
+    NOTION_OAUTH_CLIENT_SECRET=<your-client-secret>
+    ```
+  </Step>
+
+  <Step title="Restart Formbricks">
+    Restart your Formbricks instance to apply the changes.
+  </Step>
+</Steps>
+
+Once configured, follow the [Cloud setup steps](#setup-for-formbricks-cloud) to link databases.
+
+## Property Type Mapping
+
+Formbricks automatically maps survey question types to Notion property types:
+
+| Survey Question Type | Notion Property Type | Notes |
+|---------------------|---------------------|-------|
+| Text | Title, Text, or Rich Text | Short text → Title, Long text → Rich Text |
+| Multiple Choice (single) | Select | Options created automatically |
+| Multiple Choice (multi) | Multi-select | Options created automatically |
+| Number / Rating | Number | Numeric values only |
+| Date | Date | ISO format dates |
+| Email | Email | Validated email format |
+| URL | URL | Valid URLs only |
+| File Upload | Files & Media | File links |
+
+<Note>
+  If property types don't match, Notion may reject the sync. Ensure your database properties are compatible with your question types.
+</Note>
+
+## API Implementation
+
+The integration uses Notion's API v2022-06-28:
+
+### Fetching Databases
+
+```typescript
+POST https://api.notion.com/v1/search
+{
+  "filter": {
+    "value": "database",
+    "property": "object"
+  },
+  "page_size": 100
+}
+```
+
+### Creating Pages
+
+```typescript
+POST https://api.notion.com/v1/pages
+{
+  "parent": {
+    "database_id": "<database_id>"
+  },
+  "properties": {
+    "Question 1": {
+      "rich_text": [{ "text": { "content": "Response text" } }]
+    },
+    "Rating": {
+      "number": 5
+    }
+  }
+}
+```
+
+Implementation is in `apps/web/lib/notion/service.ts:writeData()`.
+
+## Example Workflow
+
+1. User completes your "Product Feedback" survey
+2. Formbricks detects the response
+3. A new page is created in your "Feedback Database" with:
+   - Title: Response ID or first question answer
+   - Properties: Mapped question responses
+   - Created time: Response timestamp
+4. Your team can now:
+   - Add comments and discussions
+   - Link to related projects
+   - Create tasks or roadmap items
+   - Filter and analyze responses
+
+## Remove Integration
+
+<Steps>
+  <Step title="Open Integrations">
+    Go to **Configuration** > **Integrations**
+  </Step>
+
+  <Step title="Manage Notion">
+    Click **Manage** on the Notion card
+  </Step>
+
+  <Step title="Delete">
+    Click **Delete Integration** and confirm
+  </Step>
+</Steps>
+
+![Delete Notion Integration](/images/xm-and-surveys/core-features/integrations/notion/delete-connection.webp)
+
+<Warning>
+  Deleting the integration removes all database links. Existing Notion pages are not deleted, but new responses won't sync.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Database not appearing">
+    Ensure:
+    - The database was shared with the Formbricks integration during OAuth
+    - You selected the correct Notion workspace
+    - The database is not archived
+    
+    Try disconnecting and reconnecting the integration.
+  </Accordion>
+
+  <Accordion title="Sync failing">
+    Check:
+    - Property types match question types
+    - All required database properties are mapped
+    - The database hasn't been deleted or archived
+    - You haven't revoked Formbricks' access in Notion settings
+  </Accordion>
+
+  <Accordion title="Missing responses">
+    - Verify the survey is linked to the database
+    - Check Notion's page history to confirm pages were created
+    - Ensure responses are fully submitted (not partial)
+  </Accordion>
+
+  <Accordion title="Property mapping errors">
+    If specific properties fail:
+    - Verify the property still exists in the database
+    - Check that the property type supports the data being sent
+    - Try re-linking the database with updated mappings
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Views" icon="eye">
+    Create filtered views in Notion to organize responses by survey, date, or rating
+  </Card>
+  
+  <Card title="Add Relations" icon="link">
+    Link response pages to Projects, Customers, or Features for better context
+  </Card>
+  
+  <Card title="Set Up Automations" icon="robot">
+    Use Notion's automation features to notify teams or update related pages
+  </Card>
+  
+  <Card title="Archive Old Data" icon="box-archive">
+    Periodically archive old responses to keep your database performant
+  </Card>
+</CardGroup>
+
+Need help? [Join our GitHub Discussions](https://github.com/formbricks/formbricks/discussions)!

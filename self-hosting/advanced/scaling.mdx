@@ -1,0 +1,728 @@
+---
+title: Scaling & High Availability
+description: Scale Formbricks horizontally for high-traffic deployments with load balancing and multi-instance setups
+icon: arrow-up-right-dots
+---
+
+Scale Formbricks to handle thousands of concurrent users and millions of survey responses with horizontal scaling, load balancing, and optimized infrastructure.
+
+## Architecture Overview
+
+Formbricks is designed as a **stateless application** that can scale horizontally. The architecture consists of:
+
+```mermaid
+graph TB
+    LB[Load Balancer] --> FB1[Formbricks Instance 1]
+    LB --> FB2[Formbricks Instance 2]
+    LB --> FB3[Formbricks Instance N]
+    FB1 --> PG[(PostgreSQL)]
+    FB2 --> PG
+    FB3 --> PG
+    FB1 --> Redis[(Redis/Valkey)]
+    FB2 --> Redis
+    FB3 --> Redis
+    FB1 --> S3[Object Storage]
+    FB2 --> S3
+    FB3 --> S3
+```
+
+**Key Components:**
+
+- **Formbricks Instances**: Stateless Next.js application (multiple replicas)
+- **PostgreSQL**: Shared database (single primary or HA cluster)
+- **Redis/Valkey**: Shared cache and session store
+- **Object Storage**: File uploads (S3, MinIO, etc.)
+- **Load Balancer**: Distributes traffic across instances
+
+<Note>
+Formbricks is stateless, meaning any instance can serve any request. All state is stored in PostgreSQL and Redis.
+</Note>
+
+## When to Scale
+
+Consider horizontal scaling when you experience:
+
+- **High Response Volume**: >100,000 survey responses per day
+- **Concurrent Users**: >500 active survey takers simultaneously
+- **CPU/Memory Pressure**: Single instance reaching 70%+ utilization
+- **Response Time Degradation**: API latency increasing
+- **Availability Requirements**: Need for zero-downtime deployments
+
+<Tip>
+Monitor these metrics to determine when to scale:
+- CPU utilization across instances
+- Memory usage and available memory
+- Database connection pool utilization
+- API response times (p95, p99)
+- Redis memory usage
+</Tip>
+
+## Kubernetes Scaling (Recommended)
+
+### Horizontal Pod Autoscaler (HPA)
+
+The Formbricks Helm chart includes built-in HPA configuration:
+
+```yaml values.yaml
+autoscaling:
+  enabled: true
+  minReplicas: 2      # Minimum instances for HA
+  maxReplicas: 10     # Maximum instances
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60  # Scale when CPU > 60%
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 60  # Scale when memory > 60%
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Wait 5min before scaling down
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120  # Remove max 1 pod every 2min
+    scaleUp:
+      stabilizationWindowSeconds: 60   # Wait 1min before scaling up
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60  # Add max 2 pods every minute
+```
+
+**How it Works:**
+
+1. HPA monitors CPU and memory metrics from Kubernetes metrics server
+2. When utilization exceeds 60%, new pods are automatically created
+3. When utilization drops, pods are gradually removed (with stabilization)
+4. Minimum of 2 replicas ensures high availability
+
+### Pod Disruption Budget (PDB)
+
+Prevent disruptions during maintenance:
+
+```yaml values.yaml
+pdb:
+  enabled: true
+  minAvailable: 1  # At least 1 pod must remain available
+  # OR
+  # maxUnavailable: 1  # At most 1 pod can be unavailable
+```
+
+**Benefits:**
+- Prevents all pods from being evicted simultaneously
+- Ensures availability during cluster upgrades
+- Protects against node drains
+
+<Warning>
+With `minAvailable: 1` and only 1 replica, node drains will be blocked. Always run at least 2 replicas in production.
+</Warning>
+
+### Resource Requests and Limits
+
+Define resource requirements per pod:
+
+```yaml values.yaml
+deployment:
+  resources:
+    requests:
+      memory: "1Gi"    # Guaranteed memory
+      cpu: "1"         # Guaranteed CPU (1 core)
+    limits:
+      memory: "2Gi"    # Maximum memory
+      # cpu limit intentionally omitted for better performance
+```
+
+**Best Practices:**
+- Set `requests` based on average usage
+- Set `limits.memory` to prevent OOM kills
+- Omit `limits.cpu` to avoid CPU throttling ([Kubernetes recommendation](https://home.robusta.dev/blog/stop-using-cpu-limits))
+- Monitor actual usage and adjust
+
+### Multi-Zone Deployment
+
+Distribute pods across availability zones for fault tolerance:
+
+```yaml values.yaml
+deployment:
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app: formbricks
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app: formbricks
+```
+
+**What This Does:**
+- Spreads pods evenly across availability zones
+- Ensures pods are on different nodes when possible
+- Survives zone-level failures
+
+## Docker Compose Scaling
+
+For Docker Compose deployments, manually scale services:
+
+### Docker Swarm (Recommended for Docker)
+
+```yaml docker-compose.yml
+version: '3.8'
+
+services:
+  formbricks:
+    image: ghcr.io/formbricks/formbricks:latest
+    deploy:
+      replicas: 3
+      restart_policy:
+        condition: on-failure
+      update_config:
+        parallelism: 1
+        delay: 10s
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+          cpus: '1.0'
+    # ... environment variables
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - formbricks
+```
+
+**Nginx Load Balancer Configuration:**
+
+```nginx nginx.conf
+upstream formbricks {
+    least_conn;  # Use least connections algorithm
+    server formbricks:3000 max_fails=3 fail_timeout=30s;
+    keepalive 32;
+}
+
+server {
+    listen 80;
+    server_name formbricks.example.com;
+
+    location / {
+        proxy_pass http://formbricks;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+}
+```
+
+**Deploy with Docker Swarm:**
+
+```bash
+# Initialize swarm
+docker swarm init
+
+# Deploy stack
+docker stack deploy -c docker-compose.yml formbricks
+
+# Scale service
+docker service scale formbricks_formbricks=5
+
+# View service status
+docker service ps formbricks_formbricks
+```
+
+### Traditional Docker Compose
+
+Without Swarm, use external load balancer:
+
+```bash
+# Scale up Formbricks instances
+docker compose up -d --scale formbricks=3
+
+# Instances will be accessible on different ports
+# Use Nginx, HAProxy, or cloud LB to distribute traffic
+```
+
+## Load Balancing Strategies
+
+### Algorithm Selection
+
+Choose the right load balancing algorithm:
+
+| Algorithm | Best For | Description |
+|-----------|----------|-------------|
+| **Round Robin** | Equal capacity instances | Distributes requests sequentially |
+| **Least Connections** | Variable request duration | Routes to instance with fewest connections |
+| **IP Hash** | Session affinity needs | Same client IP always goes to same instance |
+| **Least Response Time** | Mixed workloads | Routes to fastest responding instance |
+
+**Recommendation**: Use **Least Connections** for Formbricks as survey submissions have variable processing times.
+
+### Session Affinity (Sticky Sessions)
+
+Formbricks uses Redis for session storage, so sticky sessions are **NOT required**. However, they can reduce Redis load:
+
+<CodeGroup>
+```yaml Kubernetes Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: formbricks
+  annotations:
+    nginx.ingress.kubernetes.io/affinity: "cookie"
+    nginx.ingress.kubernetes.io/session-cookie-name: "formbricks-affinity"
+    nginx.ingress.kubernetes.io/session-cookie-max-age: "3600"
+spec:
+  # ... ingress spec
+```
+
+```nginx Nginx
+upstream formbricks {
+    ip_hash;  # Session affinity based on client IP
+    server formbricks-1:3000;
+    server formbricks-2:3000;
+    server formbricks-3:3000;
+}
+```
+
+```haproxy HAProxy
+backend formbricks
+    balance leastconn
+    cookie SERVERID insert indirect nocache
+    server fb1 10.0.1.10:3000 check cookie fb1
+    server fb2 10.0.1.11:3000 check cookie fb2
+    server fb3 10.0.1.12:3000 check cookie fb3
+```
+</CodeGroup>
+
+## Database Scaling
+
+### PostgreSQL Performance
+
+Formbricks queries are optimized for read-heavy workloads:
+
+**Connection Pooling:**
+
+```bash
+# Recommended DATABASE_URL format with connection pooling
+DATABASE_URL="postgresql://user:pass@host:5432/db?schema=public&connection_limit=20&pool_timeout=10"
+```
+
+**Per-Instance Connection Limits:**
+- 3 instances × 20 connections = 60 total connections
+- Ensure PostgreSQL `max_connections` > total connections needed
+- Typical PostgreSQL setting: `max_connections = 100-200`
+
+**Read Replicas** (Advanced):
+
+Formbricks does not natively support read replicas, but you can use PgBouncer or database proxy:
+
+```bash
+# Example with separate read/write URLs
+DATABASE_URL="postgresql://primary:5432/db"  # Writes
+READ_DATABASE_URL="postgresql://replica:5432/db"  # Reads (requires code changes)
+```
+
+### PostgreSQL High Availability
+
+Options for HA PostgreSQL:
+
+1. **Cloud Managed** (Recommended):
+   - AWS RDS Multi-AZ
+   - Google Cloud SQL HA
+   - Azure Database for PostgreSQL
+   - Automated failover and backups
+
+2. **Self-Managed**:
+   - Patroni + etcd/Consul
+   - Stolon
+   - Repmgr
+   - PostgreSQL streaming replication
+
+3. **Kubernetes**:
+   - CloudNativePG operator
+   - Zalando PostgreSQL operator
+   - Bitnami PostgreSQL HA Helm chart
+
+## Redis Scaling
+
+### Redis Configuration for HA
+
+Formbricks uses Redis for:
+- Cache storage (response caching, query results)
+- Rate limiting
+- Audit logs (when enabled)
+- Session storage
+- Distributed locks (for license checks, telemetry)
+
+**Recommended Setup:**
+
+<CodeGroup>
+```yaml Kubernetes (Helm)
+redis:
+  enabled: true
+  architecture: standalone  # Start with standalone
+  auth:
+    enabled: true
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+  # For HA, use replica:
+  # architecture: replication
+  # replica:
+  #   replicaCount: 2
+```
+
+```yaml Docker Compose
+redis:
+  image: valkey/valkey:latest
+  command: valkey-server --appendonly yes --maxmemory 2gb --maxmemory-policy allkeys-lru
+  volumes:
+    - redis-data:/data
+  restart: unless-stopped
+```
+</CodeGroup>
+
+**Memory Configuration:**
+
+```bash
+# Redis memory settings
+maxmemory 2gb
+maxmemory-policy allkeys-lru  # Evict least recently used keys
+```
+
+**High Availability Options:**
+
+1. **Redis Sentinel**: Automatic failover with monitoring
+2. **Redis Cluster**: Sharding for large datasets (likely overkill for Formbricks)
+3. **Managed Redis**: AWS ElastiCache, Google Memorystore, Azure Cache
+
+<Note>
+Formbricks is resilient to Redis failures. If Redis is unavailable:
+- Cache misses fall back to database queries
+- Rate limiting may be degraded
+- Sessions may be lost (users logged out)
+</Note>
+
+### External Redis/Valkey
+
+Use external Redis for production:
+
+```bash
+# Using managed Redis service
+REDIS_URL=redis://your-redis-instance:6379
+
+# With authentication
+REDIS_URL=redis://:password@your-redis-instance:6379
+
+# With TLS
+REDIS_URL=rediss://your-redis-instance:6380
+```
+
+In Helm values:
+
+```yaml
+redis:
+  enabled: false  # Disable built-in Redis
+  externalRedisUrl: "redis://external-redis:6379"
+```
+
+## Object Storage Scaling
+
+For file uploads at scale, use S3-compatible storage:
+
+```bash
+# AWS S3
+S3_ACCESS_KEY=AKIA...
+S3_SECRET_KEY=...
+S3_REGION=us-east-1
+S3_BUCKET_NAME=formbricks-uploads
+
+# S3-compatible (MinIO, StorJ, DigitalOcean Spaces)
+S3_ENDPOINT_URL=https://storage.example.com
+S3_FORCE_PATH_STYLE=1
+```
+
+**Benefits:**
+- Unlimited storage capacity
+- No local disk I/O overhead
+- Automatic replication and durability
+- CDN integration for fast delivery
+
+## Monitoring & Observability
+
+### OpenTelemetry Metrics
+
+Formbricks includes built-in OpenTelemetry support:
+
+```bash
+# Enable OTLP export (for Jaeger, Tempo, etc.)
+OTEL_EXPORTER_OTLP_ENDPOINT=http://collector:4318
+OTEL_SERVICE_NAME=formbricks
+OTEL_TRACES_SAMPLER=parentbased_traceidratio
+OTEL_TRACES_SAMPLER_ARG=0.1  # Sample 10% of traces
+```
+
+Configuration reference: `apps/web/instrumentation-node.ts:1`
+
+### Prometheus Metrics
+
+Expose Prometheus metrics for Kubernetes monitoring:
+
+```bash
+# Enable Prometheus exporter
+PROMETHEUS_ENABLED=1
+PROMETHEUS_EXPORTER_PORT=9464
+```
+
+In Kubernetes, ServiceMonitor is auto-configured:
+
+```yaml values.yaml
+serviceMonitor:
+  enabled: true
+  endpoints:
+    - interval: 5s
+      path: /metrics
+      port: metrics
+```
+
+**Available Metrics:**
+- HTTP request duration and count
+- Database query performance
+- Redis cache hit/miss rates
+- Node.js runtime metrics (heap, event loop lag)
+- Custom application metrics
+
+### Health Checks
+
+Formbricks exposes health endpoints:
+
+```bash
+# Kubernetes probes
+GET /health           # Overall health status
+GET /api/v2/health    # API health with dependencies
+```
+
+**Probe Configuration:**
+
+```yaml
+deployment:
+  probes:
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: 3000
+      initialDelaySeconds: 30
+      periodSeconds: 10
+```
+
+## Performance Optimization
+
+### Next.js Caching Strategy
+
+Formbricks uses React `cache()` for request-level caching:
+
+```typescript
+// Automatic deduplication of identical requests
+import { cache } from 'react';
+
+const getSurvey = cache(async (id: string) => {
+  // This function is called once per request, even if used multiple times
+  return await prisma.survey.findUnique({ where: { id } });
+});
+```
+
+**Caching Layers:**
+
+1. **React Cache**: Request-level deduplication
+2. **Redis Cache**: Cross-request caching for expensive queries
+3. **PostgreSQL**: Database-level query caching
+
+Code reference: `packages/cache/src/cache-keys.ts:11`
+
+### Database Query Optimization
+
+Formbricks follows strict database patterns:
+
+<Check>
+**Optimized Query Patterns:**
+- Never use `skip`/`offset` with `prisma.response.count()` (causes table scans)
+- Always use cursor-based pagination for large datasets
+- Filter by indexed fields (`surveyId`, `createdAt`)
+- Run count and data queries in parallel with `Promise.all`
+</Check>
+
+Example from telemetry:
+
+```typescript
+// Single batched query instead of 13 separate queries
+const [countsResult] = await prisma.$queryRaw`
+  SELECT
+    (SELECT COUNT(*) FROM "Organization") as "organizationCount",
+    (SELECT COUNT(*) FROM "User") as "userCount",
+    -- ... more counts in one round-trip
+`;
+```
+
+Reference: `apps/web/app/api/(internal)/pipeline/lib/telemetry.ts:144`
+
+### Rate Limiting
+
+Formbricks includes built-in rate limiting:
+
+```bash
+# Disable rate limiting (not recommended in production)
+RATE_LIMITING_DISABLED=1
+```
+
+Rate limiting uses Redis for distributed counting across instances.
+
+Implementation: `apps/web/modules/core/rate-limit/rate-limit.ts:87`
+
+## Scaling Checklist
+
+<Steps>
+  <Step title="Assess Current Performance">
+    - Monitor CPU, memory, and database metrics
+    - Identify bottlenecks (application, database, Redis)
+    - Establish baseline performance metrics
+  </Step>
+
+  <Step title="Optimize Single Instance">
+    - Tune PostgreSQL configuration (connection pooling, query cache)
+    - Configure Redis eviction policies
+    - Enable Prometheus metrics for visibility
+    - Optimize slow database queries
+  </Step>
+
+  <Step title="Prepare for Horizontal Scaling">
+    - Migrate to external PostgreSQL (managed service recommended)
+    - Migrate to external Redis/Valkey
+    - Configure S3 for file uploads
+    - Set up health check endpoints
+  </Step>
+
+  <Step title="Deploy Multiple Instances">
+    - Start with 2 replicas for high availability
+    - Configure load balancer with health checks
+    - Enable session affinity (optional)
+    - Test failover scenarios
+  </Step>
+
+  <Step title="Enable Autoscaling">
+    - Configure HPA with CPU/memory targets
+    - Set appropriate min/max replica counts
+    - Configure Pod Disruption Budget
+    - Test scale-up and scale-down behavior
+  </Step>
+
+  <Step title="Monitor & Iterate">
+    - Set up alerting for critical metrics
+    - Monitor autoscaling events
+    - Tune resource requests/limits based on actual usage
+    - Perform load testing regularly
+  </Step>
+</Steps>
+
+## Performance Benchmarks
+
+Typical performance for a properly configured instance:
+
+| Metric | Single Instance (2 CPU, 2GB RAM) | Scaled (3 instances) |
+|--------|----------------------------------|----------------------|
+| Survey Responses/sec | ~50 | ~150 |
+| Concurrent Users | ~200 | ~600 |
+| API Response Time (p95) | &lt;200ms | &lt;150ms |
+| Database Connections | ~20 | ~60 |
+
+<Note>
+Actual performance varies based on survey complexity, response data size, and infrastructure configuration.
+</Note>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Database Connection Pool Exhausted">
+    **Symptoms**: `Error: Connection pool timeout`
+    
+    **Solutions**:
+    1. Increase connection limit in DATABASE_URL: `connection_limit=30`
+    2. Reduce number of instances or connections per instance
+    3. Increase PostgreSQL `max_connections`
+    4. Use PgBouncer for connection pooling
+  </Accordion>
+
+  <Accordion title="Redis Memory Exhaustion">
+    **Symptoms**: `Redis OOM` errors, eviction warnings
+    
+    **Solutions**:
+    1. Increase Redis memory: `maxmemory 4gb`
+    2. Configure eviction policy: `maxmemory-policy allkeys-lru`
+    3. Reduce cache TTL values
+    4. Scale Redis vertically or use Redis Cluster
+  </Accordion>
+
+  <Accordion title="Uneven Load Distribution">
+    **Symptoms**: Some instances at 90% CPU, others at 20%
+    
+    **Solutions**:
+    1. Switch to least-connections load balancing
+    2. Disable session affinity if not needed
+    3. Check for long-running requests blocking instances
+    4. Verify all instances are healthy and receiving traffic
+  </Accordion>
+
+  <Accordion title="Slow Database Queries">
+    **Symptoms**: High API latency, database CPU at 100%
+    
+    **Solutions**:
+    1. Enable PostgreSQL slow query log
+    2. Add missing indexes on frequently queried columns
+    3. Review Prisma query patterns in logs
+    4. Consider database read replicas for analytics
+  </Accordion>
+</AccordionGroup>
+
+## Further Reading
+
+- [Kubernetes HPA Documentation](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/)
+- [PostgreSQL Performance Tuning](https://www.postgresql.org/docs/current/performance-tips.html)
+- [Redis Persistence and Durability](https://redis.io/docs/management/persistence/)
+- [Next.js Production Deployment](https://nextjs.org/docs/deployment/production-checklist)
+
+<Info>
+For assistance with scaling beyond 10 instances or enterprise-level deployments, [contact the Formbricks team](https://formbricks.com/contact) for architecture consulting.
+</Info>

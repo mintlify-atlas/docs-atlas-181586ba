@@ -1,0 +1,384 @@
+---
+title: React SDK
+description: Integrate Formbricks surveys into your React application
+icon: react
+---
+
+The Formbricks JavaScript SDK works seamlessly with React applications. This guide shows you how to integrate surveys into your React app.
+
+## Installation
+
+<Steps>
+  <Step title="Install the package">
+    Install the Formbricks JavaScript SDK:
+
+    <CodeGroup>
+      ```bash npm
+      npm install @formbricks/js
+      ```
+
+      ```bash yarn
+      yarn add @formbricks/js
+      ```
+
+      ```bash pnpm
+      pnpm add @formbricks/js
+      ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Initialize in your app">
+    Create a Formbricks initialization hook or component. The best place is typically in your root component or a custom hook:
+
+    ```tsx
+    // hooks/useFormbricks.ts
+    import { useEffect } from 'react';
+    import formbricks from '@formbricks/js';
+
+    export function useFormbricks() {
+      useEffect(() => {
+        if (typeof window !== 'undefined') {
+          formbricks.setup({
+            environmentId: process.env.REACT_APP_FORMBRICKS_ENV_ID!,
+            appUrl: 'https://app.formbricks.com',
+          });
+        }
+      }, []);
+    }
+    ```
+  </Step>
+
+  <Step title="Use the hook in your app">
+    Import and use the hook in your root component:
+
+    ```tsx
+    // App.tsx
+    import { useFormbricks } from './hooks/useFormbricks';
+
+    function App() {
+      useFormbricks();
+
+      return (
+        <div className="App">
+          {/* Your app content */}
+        </div>
+      );
+    }
+
+    export default App;
+    ```
+  </Step>
+</Steps>
+
+## Environment Variables
+
+Create a `.env` file in your project root:
+
+```bash
+REACT_APP_FORMBRICKS_ENV_ID=your-environment-id
+```
+
+## User Identification
+
+### Identifying Users on Login
+
+Create a hook to handle user identification:
+
+```tsx
+// hooks/useFormbricksUser.ts
+import { useEffect } from 'react';
+import formbricks from '@formbricks/js';
+
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+  plan?: string;
+}
+
+export function useFormbricksUser(user: User | null) {
+  useEffect(() => {
+    if (user) {
+      const identifyUser = async () => {
+        await formbricks.setUserId(user.id);
+        await formbricks.setEmail(user.email);
+        
+        if (user.name || user.plan) {
+          await formbricks.setAttributes({
+            ...(user.name && { name: user.name }),
+            ...(user.plan && { plan: user.plan }),
+          });
+        }
+      };
+
+      identifyUser();
+    }
+  }, [user]);
+}
+```
+
+Use it in your authenticated layout:
+
+```tsx
+import { useFormbricksUser } from './hooks/useFormbricksUser';
+import { useAuth } from './hooks/useAuth'; // Your auth hook
+
+function AuthenticatedApp() {
+  const { user } = useAuth();
+  useFormbricksUser(user);
+
+  return <>{/* Your authenticated app */}</>;
+}
+```
+
+### Handling Logout
+
+```tsx
+import formbricks from '@formbricks/js';
+
+function LogoutButton() {
+  const handleLogout = async () => {
+    // Your logout logic
+    await logout();
+    
+    // Clear Formbricks user data
+    await formbricks.logout();
+  };
+
+  return <button onClick={handleLogout}>Logout</button>;
+}
+```
+
+## Tracking Events
+
+Create reusable functions for tracking:
+
+```tsx
+// utils/analytics.ts
+import formbricks from '@formbricks/js';
+
+export const trackEvent = async (eventName: string) => {
+  await formbricks.track(eventName);
+};
+
+export const analytics = {
+  featureUsed: (feature: string) => trackEvent(`feature_${feature}_used`),
+  purchaseCompleted: () => trackEvent('purchase_completed'),
+  onboardingCompleted: () => trackEvent('onboarding_completed'),
+};
+```
+
+Use in your components:
+
+```tsx
+import { analytics } from './utils/analytics';
+
+function FeatureButton() {
+  const handleClick = () => {
+    // Your feature logic
+    analytics.featureUsed('export');
+  };
+
+  return <button onClick={handleClick}>Export Data</button>;
+}
+```
+
+## React Router Integration
+
+For React Router applications, track route changes:
+
+```tsx
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import formbricks from '@formbricks/js';
+
+function RouteTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    formbricks.registerRouteChange();
+  }, [location.pathname]);
+
+  return null;
+}
+
+// In your App.tsx
+function App() {
+  return (
+    <Router>
+      <RouteTracker />
+      {/* Your routes */}
+    </Router>
+  );
+}
+```
+
+## TypeScript Example
+
+Here's a complete TypeScript implementation:
+
+```tsx
+// hooks/useFormbricks.ts
+import { useEffect } from 'react';
+import formbricks from '@formbricks/js';
+import type { TFormbricks } from '@formbricks/js';
+
+interface FormbricksConfig {
+  environmentId: string;
+  appUrl: string;
+}
+
+const config: FormbricksConfig = {
+  environmentId: process.env.REACT_APP_FORMBRICKS_ENV_ID!,
+  appUrl: process.env.REACT_APP_FORMBRICKS_URL || 'https://app.formbricks.com',
+};
+
+export function useFormbricks(): TFormbricks {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      formbricks.setup(config);
+    }
+  }, []);
+
+  return formbricks;
+}
+```
+
+```tsx
+// hooks/useFormbricksUser.ts
+import { useEffect } from 'react';
+import formbricks from '@formbricks/js';
+
+interface UserAttributes {
+  [key: string]: string;
+}
+
+interface User {
+  id: string;
+  email: string;
+  attributes?: UserAttributes;
+}
+
+export function useFormbricksUser(user: User | null): void {
+  useEffect(() => {
+    const identifyUser = async () => {
+      if (!user) return;
+
+      await formbricks.setUserId(user.id);
+      await formbricks.setEmail(user.email);
+
+      if (user.attributes) {
+        await formbricks.setAttributes(user.attributes);
+      }
+    };
+
+    identifyUser();
+  }, [user]);
+}
+```
+
+## Context Provider Pattern
+
+For larger applications, you might want to use a context provider:
+
+```tsx
+// contexts/FormbricksContext.tsx
+import React, { createContext, useContext, useEffect } from 'react';
+import formbricks from '@formbricks/js';
+import type { TFormbricks } from '@formbricks/js';
+
+const FormbricksContext = createContext<TFormbricks | null>(null);
+
+export function FormbricksProvider({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      formbricks.setup({
+        environmentId: process.env.REACT_APP_FORMBRICKS_ENV_ID!,
+        appUrl: 'https://app.formbricks.com',
+      });
+    }
+  }, []);
+
+  return (
+    <FormbricksContext.Provider value={formbricks}>
+      {children}
+    </FormbricksContext.Provider>
+  );
+}
+
+export function useFormbricksContext(): TFormbricks {
+  const context = useContext(FormbricksContext);
+  if (!context) {
+    throw new Error('useFormbricksContext must be used within FormbricksProvider');
+  }
+  return context;
+}
+```
+
+Usage:
+
+```tsx
+// index.tsx or App.tsx
+import { FormbricksProvider } from './contexts/FormbricksContext';
+
+function App() {
+  return (
+    <FormbricksProvider>
+      {/* Your app */}
+    </FormbricksProvider>
+  );
+}
+
+// In any component
+import { useFormbricksContext } from './contexts/FormbricksContext';
+
+function MyComponent() {
+  const formbricks = useFormbricksContext();
+
+  const handleAction = async () => {
+    await formbricks.track('button_clicked');
+  };
+
+  return <button onClick={handleAction}>Click Me</button>;
+}
+```
+
+## Content Security Policy
+
+If you use CSP, set the nonce in your app:
+
+```tsx
+import { useEffect } from 'react';
+import formbricks from '@formbricks/js';
+
+function App() {
+  useEffect(() => {
+    // Get nonce from meta tag or your CSP implementation
+    const nonce = document.querySelector('meta[property="csp-nonce"]')?.getAttribute('content');
+    if (nonce) {
+      formbricks.setNonce(nonce);
+    }
+  }, []);
+
+  return <>{/* Your app */}</>;
+}
+```
+
+## Best Practices
+
+1. **Initialize Once**: Use `useEffect` with an empty dependency array to initialize Formbricks only once
+2. **Error Handling**: Wrap async calls in try-catch blocks for production apps
+3. **Environment Variables**: Store sensitive configuration in environment variables
+4. **Type Safety**: Use TypeScript for better developer experience
+5. **Route Tracking**: Register route changes for accurate page view tracking
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Next.js Integration" icon="n" href="/integration/nextjs">
+    Learn about Next.js-specific integration patterns
+  </Card>
+  <Card title="Vue Integration" icon="vuejs" href="/integration/vue">
+    Integrate Formbricks with Vue applications
+  </Card>
+</CardGroup>

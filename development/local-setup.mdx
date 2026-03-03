@@ -1,0 +1,346 @@
+---
+title: Local Development Setup
+description: Set up Formbricks for local development
+icon: laptop-code
+---
+
+This guide will help you set up Formbricks for local development on your machine.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+<AccordionGroup>
+  <Accordion title="Node.js (>=20.0.0)">
+    Formbricks requires Node.js version 20 or higher.
+    
+    ```bash
+    node --version
+    # Should output v20.x.x or higher
+    ```
+    
+    Download from [nodejs.org](https://nodejs.org/en)
+  </Accordion>
+
+  <Accordion title="pnpm (10.28.2)">
+    Formbricks uses pnpm as the package manager.
+    
+    ```bash
+    npm install -g pnpm@10.28.2
+    pnpm --version
+    ```
+  </Accordion>
+
+  <Accordion title="Docker & Docker Compose">
+    Required to run PostgreSQL, MailHog, Valkey (Redis), and MinIO.
+    
+    Download from [docker.com](https://www.docker.com/)
+    
+    Verify installation:
+    ```bash
+    docker --version
+    docker compose version
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/formbricks/formbricks.git
+    cd formbricks
+    ```
+  </Step>
+
+  <Step title="Install Dependencies">
+    Install all workspace dependencies:
+    
+    ```bash
+    pnpm install
+    ```
+    
+    This will install dependencies for all packages and apps in the monorepo.
+  </Step>
+
+  <Step title="Start Docker Services">
+    Start PostgreSQL, MailHog, Valkey, and MinIO:
+    
+    ```bash
+    pnpm db:up
+    ```
+    
+    This command starts:
+    - **PostgreSQL** (port 5432) - Main database with pgvector extension
+    - **MailHog** (ports 1025, 8025) - Email testing
+    - **Valkey** (port 6379) - Redis-compatible cache
+    - **MinIO** (ports 9000, 9001) - S3-compatible object storage
+    
+    <Tip>
+    Access MinIO console at http://localhost:9001 (devminio/devminio123)
+    
+    Access MailHog at http://localhost:8025
+    </Tip>
+  </Step>
+
+  <Step title="Setup Database">
+    Apply Prisma migrations and generate the Prisma client:
+    
+    ```bash
+    pnpm db:migrate:dev
+    ```
+    
+    This will:
+    - Run all Prisma migrations
+    - Generate the Prisma client
+    - Create the SAML database (if configured)
+  </Step>
+
+  <Step title="Seed the Database (Optional)">
+    Populate the database with development data:
+    
+    ```bash
+    pnpm db:seed
+    ```
+    
+    To clear and reseed:
+    ```bash
+    pnpm db:seed:clear
+    ```
+  </Step>
+
+  <Step title="Start Development Server">
+    Start all development servers:
+    
+    ```bash
+    pnpm dev
+    ```
+    
+    Or use the quick start command:
+    ```bash
+    pnpm go
+    ```
+    
+    This starts the database and all dev servers in parallel.
+    
+    The web application will be available at:
+    - **Web App**: http://localhost:3000
+  </Step>
+</Steps>
+
+## Development Scripts
+
+Here are the most commonly used development commands:
+
+### Database Commands
+
+```bash
+# Start Docker services
+pnpm db:up
+
+# Stop Docker services
+pnpm db:down
+
+# Run migrations (development)
+pnpm db:migrate:dev
+
+# Deploy migrations (production)
+pnpm db:migrate:deploy
+
+# Push schema changes without migrations
+pnpm db:push
+
+# Seed database
+pnpm db:seed
+
+# Clear and reseed
+pnpm db:seed:clear
+```
+
+### Build Commands
+
+```bash
+# Build all packages and apps
+pnpm build
+
+# Build in development mode
+pnpm build:dev
+
+# Build with force (bypass cache)
+pnpm build --force
+```
+
+### Development Commands
+
+```bash
+# Start all dev servers (parallel)
+pnpm dev
+
+# Quick start (db + dev)
+pnpm go
+
+# Start production build
+pnpm start
+```
+
+### Code Quality Commands
+
+```bash
+# Run ESLint
+pnpm lint
+
+# Format with Prettier
+pnpm format
+
+# Run unit tests
+pnpm test
+
+# Run tests with coverage
+pnpm test:coverage
+
+# Run E2E tests
+pnpm test:e2e
+```
+
+### Cleanup Commands
+
+```bash
+# Clean all build artifacts and node_modules
+pnpm clean:all
+
+# Clean build artifacts only
+pnpm clean
+```
+
+## Working with Survey Packages
+
+<Warning>
+The `@formbricks/surveys` package requires special attention due to its build process.
+</Warning>
+
+The surveys package is pre-compiled to UMD and ESM formats, and the bundle is copied to `apps/web/public/js/`. Changes to survey packages require a rebuild:
+
+```bash
+# After changes to packages/surveys or dependencies
+rm -rf packages/surveys/dist apps/web/public/js/surveys.* node_modules/.cache/turbo
+pnpm build --filter=@formbricks/surveys... --force
+
+# Hard refresh browser (Cmd+Shift+R / Ctrl+Shift+R)
+# Or disable browser cache in DevTools
+
+# Restart Next.js dev server
+pnpm dev
+```
+
+## Environment Variables
+
+Create a `.env` file in the root directory. Here are the essential variables for local development:
+
+```bash
+# Database
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/formbricks?schema=public"
+
+# Email (MailHog)
+MAIL_FROM="noreply@formbricks.com"
+SMTP_HOST="localhost"
+SMTP_PORT="1025"
+SMTP_USER=""
+SMTP_PASSWORD=""
+
+# NextAuth
+NEXTAUTH_SECRET="your-secret-key-here"
+NEXTAUTH_URL="http://localhost:3000"
+
+# Optional: Redis/Valkey
+REDIS_URL="redis://localhost:6379"
+
+# Optional: S3/MinIO
+S3_ACCESS_KEY="devminio"
+S3_SECRET_KEY="devminio123"
+S3_REGION="us-east-1"
+S3_BUCKET_NAME="formbricks"
+S3_ENDPOINT_URL="http://localhost:9000"
+S3_FORCE_PATH_STYLE="true"
+```
+
+<Tip>
+For a complete list of environment variables, check the `turbo.json` file which lists all supported environment variables.
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port already in use">
+    If ports 3000, 5432, 6379, or other default ports are in use:
+    
+    1. Stop conflicting services
+    2. Or modify the ports in `docker-compose.dev.yml`
+    3. Update your `.env` file accordingly
+  </Accordion>
+
+  <Accordion title="Prisma client errors">
+    If you see Prisma client errors:
+    
+    ```bash
+    pnpm db:migrate:dev
+    ```
+    
+    This regenerates the Prisma client.
+  </Accordion>
+
+  <Accordion title="Survey changes not reflecting">
+    After changing survey packages:
+    
+    1. Rebuild the surveys package with `--force`
+    2. Hard refresh your browser
+    3. Restart the Next.js dev server
+    
+    See [Working with Survey Packages](#working-with-survey-packages) above.
+  </Accordion>
+
+  <Accordion title="Turbo cache issues">
+    If builds seem stale:
+    
+    ```bash
+    rm -rf node_modules/.cache/turbo
+    pnpm build --force
+    ```
+  </Accordion>
+
+  <Accordion title="Docker services not starting">
+    Check Docker is running:
+    
+    ```bash
+    docker ps
+    ```
+    
+    View logs:
+    ```bash
+    docker compose -f docker-compose.dev.yml logs
+    ```
+    
+    Restart services:
+    ```bash
+    pnpm db:down
+    pnpm db:up
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/development/architecture">
+    Understand the system architecture
+  </Card>
+  <Card title="Code Style" icon="code" href="/development/standards/code-style">
+    Learn our coding standards
+  </Card>
+  <Card title="Testing" icon="flask" href="/development/standards/testing">
+    Write tests for your code
+  </Card>
+  <Card title="Contributing" icon="book" href="/development/contributing">
+    Read contribution guidelines
+  </Card>
+</CardGroup>

@@ -1,0 +1,189 @@
+---
+title: Open Text
+description: Collect short or long-form text responses from respondents
+---
+
+The Open Text question type allows you to collect free-form text input from respondents. It's one of the most versatile question types, supporting various input formats including email, URL, phone numbers, and more.
+
+## Configuration
+
+### Basic Properties
+
+```typescript
+type TSurveyOpenTextElement = {
+  id: string;                    // Unique identifier (alphanumeric, hyphens, underscores)
+  type: "openText";              // Question type
+  headline: TI18nString;         // Main question text (required)
+  subheader?: TI18nString;       // Optional descriptive text
+  required: boolean;             // Whether response is mandatory
+  placeholder?: TI18nString;     // Placeholder text in input field
+  longAnswer?: boolean;          // Show textarea instead of input (default: false)
+  inputType?: "text" | "email" | "url" | "number" | "phone"; // Input validation type
+  insightsEnabled?: boolean;     // Enable AI insights (default: false)
+  imageUrl?: string;             // Optional image URL
+  videoUrl?: string;             // Optional video URL
+  isDraft?: boolean;             // Mark as draft
+};
+```
+
+### Input Types
+
+The `inputType` property determines the type of input validation and keyboard on mobile devices:
+
+- **text** (default): Standard text input
+- **email**: Validates email format, shows email keyboard
+- **url**: Validates URL format
+- **number**: Accepts only numeric input
+- **phone**: Validates phone number format
+
+### Character Limits
+
+Control the length of responses with character limits:
+
+```typescript
+charLimit: {
+  enabled: boolean;              // Enable character limits
+  min?: number;                  // Minimum characters (optional)
+  max?: number;                  // Maximum characters (optional)
+}
+```
+
+**Validation rules:**
+- At least one of `min` or `max` must be set when enabled
+- Values must be positive numbers
+- `min` cannot be greater than `max`
+
+### Validation Rules
+
+Open Text supports advanced validation rules:
+
+```typescript
+validation?: {
+  rules: TValidationRule[];
+  logic: "and" | "or";           // How to combine multiple rules
+}
+```
+
+**Available validation rule types:**
+- `minLength`, `maxLength`: Text length constraints
+- `pattern`: Regular expression matching
+- `email`, `url`, `phone`: Format validation
+- `equals`, `doesNotEqual`: Exact matching
+- `contains`, `doesNotContain`: Substring matching
+- `minValue`, `maxValue`: Numeric range (when inputType is "number")
+- `isGreaterThan`, `isLessThan`: Numeric comparison
+
+## Use Cases
+
+### Short Answer
+
+Collect brief responses like names or one-word answers:
+
+```typescript
+{
+  id: "first_name",
+  type: "openText",
+  headline: { default: "What's your first name?" },
+  required: true,
+  longAnswer: false,
+  charLimit: {
+    enabled: true,
+    max: 50
+  }
+}
+```
+
+### Email Collection
+
+Validate email addresses with built-in validation:
+
+```typescript
+{
+  id: "user_email",
+  type: "openText",
+  headline: { default: "What's your email address?" },
+  inputType: "email",
+  required: true,
+  placeholder: { default: "you@example.com" }
+}
+```
+
+### Long-Form Feedback
+
+Collect detailed responses with a text area:
+
+```typescript
+{
+  id: "feedback",
+  type: "openText",
+  headline: { default: "Tell us about your experience" },
+  subheader: { default: "Please be as detailed as possible" },
+  longAnswer: true,
+  required: false,
+  charLimit: {
+    enabled: true,
+    min: 50,
+    max: 500
+  }
+}
+```
+
+### Phone Number
+
+Collect and validate phone numbers:
+
+```typescript
+{
+  id: "contact_phone",
+  type: "openText",
+  headline: { default: "What's your phone number?" },
+  inputType: "phone",
+  placeholder: { default: "+1 (555) 000-0000" },
+  required: true
+}
+```
+
+### Numeric Input
+
+Collect numbers with validation:
+
+```typescript
+{
+  id: "age",
+  type: "openText",
+  headline: { default: "How old are you?" },
+  inputType: "number",
+  required: true,
+  validation: {
+    logic: "and",
+    rules: [
+      {
+        id: "min_age",
+        type: "minValue",
+        params: { min: 18 }
+      },
+      {
+        id: "max_age",
+        type: "maxValue",
+        params: { max: 120 }
+      }
+    ]
+  }
+}
+```
+
+## Best Practices
+
+1. **Use appropriate input types**: Set `inputType` to improve mobile experience and enable basic validation
+2. **Provide clear placeholders**: Help users understand the expected format
+3. **Set reasonable character limits**: Prevent overly short or long responses
+4. **Use longAnswer for detailed feedback**: Enable textarea for responses longer than a sentence
+5. **Consider validation rules**: Add custom validation when you need specific formats beyond basic input types
+6. **Make optional when possible**: Only require text input when absolutely necessary
+
+## Accessibility
+
+- The `headline` is used as the label for screen readers
+- `placeholder` text provides additional context
+- Input type affects mobile keyboard and screen reader announcements
+- Required fields are clearly marked for assistive technologies

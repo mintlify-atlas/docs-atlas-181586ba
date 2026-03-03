@@ -1,0 +1,470 @@
+---
+title: Railway Deployment
+description: Deploy Formbricks on Railway with one click for a managed hosting experience
+icon: train
+---
+
+Deploy Formbricks on Railway for a fully managed, zero-configuration deployment. Railway handles infrastructure, scaling, and SSL certificates automatically.
+
+## Why Railway?
+
+Railway provides a streamlined deployment experience:
+
+- One-click deployment from template
+- Automatic SSL certificates
+- Built-in PostgreSQL and Redis
+- Auto-scaling and load balancing
+- Pay-as-you-go pricing
+- Zero DevOps overhead
+
+<Info>
+  Railway is ideal for small to medium deployments. For large-scale production workloads, consider [Kubernetes](/self-hosting/kubernetes) or [Docker](/self-hosting/docker).
+</Info>
+
+## Quick Deploy
+
+<Steps>
+  <Step title="Deploy from Template">
+    Click the button below to deploy Formbricks on Railway:
+
+    [![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template/PPDzCd)
+
+    This will:
+    - Create a new Railway project
+    - Provision PostgreSQL database
+    - Provision Redis cache
+    - Deploy the Formbricks application
+    - Generate a public URL
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Railway will prompt you to configure required environment variables:
+
+    | Variable | Description | Required |
+    |----------|-------------|----------|
+    | `WEBAPP_URL` | Your Railway URL (auto-generated) | Yes |
+    | `NEXTAUTH_SECRET` | Secret for NextAuth | Auto-generated |
+    | `ENCRYPTION_KEY` | Encryption key for 2FA | Auto-generated |
+    | `CRON_SECRET` | API secret for cron jobs | Auto-generated |
+
+    <Tip>
+      Railway auto-generates secure secrets. You can customize them if needed, but the defaults are cryptographically secure.
+    </Tip>
+  </Step>
+
+  <Step title="Wait for Deployment">
+    Railway will:
+    1. Build the Formbricks container
+    2. Run database migrations
+    3. Start the application
+    4. Provision SSL certificate
+
+    This typically takes 3-5 minutes.
+  </Step>
+
+  <Step title="Access Your Instance">
+    Once deployed, Railway provides a public URL:
+
+    ```
+    https://formbricks-production-abc123.up.railway.app
+    ```
+
+    Visit this URL to complete the Formbricks setup wizard.
+  </Step>
+</Steps>
+
+## Custom Domain Setup
+
+You can use your own domain instead of the Railway-provided URL:
+
+<Steps>
+  <Step title="Add Custom Domain in Railway">
+    1. Open your Railway project
+    2. Click on the Formbricks service
+    3. Navigate to **Settings** → **Networking**
+    4. Click **Add Custom Domain**
+    5. Enter your domain (e.g., `formbricks.example.com`)
+  </Step>
+
+  <Step title="Configure DNS">
+    Add a CNAME record in your DNS provider:
+
+    | Type | Name | Value |
+    |------|------|-------|
+    | CNAME | formbricks | your-app.up.railway.app |
+
+    Or for apex domains, use Railway's provided A records.
+  </Step>
+
+  <Step title="Update Environment Variables">
+    Update `WEBAPP_URL` and `NEXTAUTH_URL` to use your custom domain:
+
+    ```bash
+    WEBAPP_URL=https://formbricks.example.com
+    NEXTAUTH_URL=https://formbricks.example.com
+    ```
+
+    Railway will automatically redeploy after variable changes.
+  </Step>
+
+  <Step title="Verify SSL Certificate">
+    Railway automatically provisions SSL certificates for custom domains. This may take a few minutes.
+
+    Check certificate status in the Railway dashboard under **Settings** → **Networking**.
+  </Step>
+</Steps>
+
+## Configuration
+
+### Environment Variables
+
+Customize your deployment by adding environment variables in Railway:
+
+<AccordionGroup>
+  <Accordion title="Email Configuration (SMTP)">
+    Enable email verification and password reset:
+
+    ```bash
+    EMAIL_VERIFICATION_DISABLED=0
+    PASSWORD_RESET_DISABLED=0
+    MAIL_FROM=noreply@example.com
+    MAIL_FROM_NAME=Formbricks
+    SMTP_HOST=smtp.gmail.com
+    SMTP_PORT=587
+    SMTP_USER=your-email@gmail.com
+    SMTP_PASSWORD=your-app-password
+    SMTP_SECURE_ENABLED=1
+    ```
+
+    <Tip>
+      Use Gmail App Passwords or a transactional email service like SendGrid, Mailgun, or AWS SES.
+    </Tip>
+  </Accordion>
+
+  <Accordion title="File Storage (S3)">
+    Store file uploads in S3 or compatible storage:
+
+    ```bash
+    S3_ACCESS_KEY=your-access-key
+    S3_SECRET_KEY=your-secret-key
+    S3_REGION=us-east-1
+    S3_BUCKET_NAME=formbricks-uploads
+    # For S3-compatible storage (Backblaze, DigitalOcean Spaces, etc.)
+    S3_ENDPOINT_URL=https://s3.us-east-1.amazonaws.com
+    ```
+
+    <Warning>
+      Railway's file system is ephemeral. Always use S3 for file uploads in production.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="OAuth Providers">
+    Enable social login:
+
+    ```bash
+    # GitHub
+    GITHUB_ID=your-github-client-id
+    GITHUB_SECRET=your-github-client-secret
+
+    # Google
+    GOOGLE_CLIENT_ID=your-google-client-id
+    GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+    # Azure AD
+    AZUREAD_CLIENT_ID=your-azure-client-id
+    AZUREAD_CLIENT_SECRET=your-azure-client-secret
+    AZUREAD_TENANT_ID=your-tenant-id
+    ```
+  </Accordion>
+
+  <Accordion title="Enterprise License">
+    Activate Enterprise features:
+
+    ```bash
+    ENTERPRISE_LICENSE_KEY=your-license-key
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Database Configuration
+
+Railway automatically provisions a PostgreSQL database with pgvector support. The connection string is injected as `DATABASE_URL`.
+
+#### Access PostgreSQL
+
+Connect to your database using Railway's CLI:
+
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+
+# Login
+railway login
+
+# Connect to database
+railway connect postgres
+```
+
+Or use the connection details from Railway dashboard:
+
+```
+Host: containers-us-west-xxx.railway.app
+Port: 5432
+Database: railway
+Username: postgres
+Password: [shown in dashboard]
+```
+
+### Redis Configuration
+
+Railway provisions a Redis instance for caching and rate limiting. The connection string is injected as `REDIS_URL`.
+
+## Monitoring and Logs
+
+### View Application Logs
+
+Access real-time logs in the Railway dashboard:
+
+1. Open your project
+2. Click on the Formbricks service
+3. Navigate to **Logs**
+
+Or use the CLI:
+
+```bash
+railway logs
+```
+
+### Metrics
+
+Railway provides built-in metrics:
+
+- CPU usage
+- Memory usage
+- Network traffic
+- Request count
+
+View metrics in **Metrics** tab of your service.
+
+## Scaling
+
+### Vertical Scaling
+
+Increase resources for your Formbricks instance:
+
+1. Navigate to **Settings** → **Resources**
+2. Adjust memory and CPU allocation
+3. Railway will restart the service with new limits
+
+<Info>
+  Railway automatically scales resources based on usage. You can set limits to control costs.
+</Info>
+
+### Horizontal Scaling
+
+Railway supports horizontal scaling with multiple replicas:
+
+1. Navigate to **Settings** → **Replicas**
+2. Increase replica count
+3. Railway handles load balancing automatically
+
+<Warning>
+  Ensure your database and Redis instances can handle increased connection load when scaling horizontally.
+</Warning>
+
+## Backup and Restore
+
+### Database Backups
+
+Railway automatically backs up PostgreSQL databases:
+
+- **Automatic backups**: Daily snapshots (retained for 7 days)
+- **Manual backups**: Create on-demand snapshots
+
+#### Create Manual Backup
+
+1. Navigate to PostgreSQL service
+2. Click **Backups**
+3. Click **Create Backup**
+
+#### Restore from Backup
+
+1. Navigate to **Backups**
+2. Select backup snapshot
+3. Click **Restore**
+
+<Warning>
+  Restoring will overwrite current data. Create a manual backup before restoring.
+</Warning>
+
+### Export Database
+
+Export your database for external backups:
+
+```bash
+# Connect to Railway
+railway login
+railway link
+
+# Export database
+railway run pg_dump -U postgres railway > formbricks-backup.sql
+```
+
+## Updating Formbricks
+
+Railway automatically deploys from the Formbricks GitHub repository:
+
+### Automatic Updates
+
+1. Enable **Auto-Deploy** in Railway settings
+2. Railway will automatically deploy new releases
+3. Database migrations run automatically
+
+### Manual Updates
+
+1. Navigate to **Deployments**
+2. Click **Deploy**
+3. Select the latest commit or tag
+4. Railway will build and deploy
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Deployment Failed">
+    Check build logs:
+
+    ```bash
+    railway logs --build
+    ```
+
+    Common issues:
+    - Missing environment variables
+    - Build timeout (increase build resources)
+    - Database connection errors
+  </Accordion>
+
+  <Accordion title="Application Won't Start">
+    View runtime logs:
+
+    ```bash
+    railway logs
+    ```
+
+    Check for:
+    - Database migration failures
+    - Invalid environment variables
+    - Port binding issues (Railway uses PORT variable)
+  </Accordion>
+
+  <Accordion title="Database Connection Errors">
+    Verify database status:
+
+    1. Navigate to PostgreSQL service
+    2. Check service status (should be "Running")
+    3. Verify `DATABASE_URL` is injected correctly
+
+    Test connection:
+
+    ```bash
+    railway connect postgres
+    ```
+  </Accordion>
+
+  <Accordion title="High Memory Usage">
+    Railway may kill containers exceeding memory limits.
+
+    Solutions:
+    - Increase memory allocation in **Settings** → **Resources**
+    - Optimize database queries
+    - Enable Redis caching
+    - Reduce concurrent requests
+  </Accordion>
+
+  <Accordion title="Custom Domain Not Working">
+    Verify:
+    - DNS CNAME record is correct
+    - DNS has propagated (use `dig` or `nslookup`)
+    - SSL certificate provisioned (check Networking tab)
+    - `WEBAPP_URL` updated to custom domain
+
+    Force SSL renewal:
+
+    1. Remove custom domain
+    2. Wait 1 minute
+    3. Re-add custom domain
+  </Accordion>
+</AccordionGroup>
+
+## Cost Optimization
+
+### Pricing Considerations
+
+Railway charges based on:
+- **Execution time**: vCPU-hour usage
+- **Memory**: GB-hour usage
+- **Network**: Outbound bandwidth
+- **Database storage**: GB-month
+
+### Optimization Tips
+
+1. **Right-size resources**: Don't over-allocate CPU/memory
+2. **Enable Redis caching**: Reduces database queries
+3. **Use CDN for assets**: Offload static file serving
+4. **Optimize images**: Compress uploaded files
+5. **Set up auto-scaling**: Scale down during low traffic
+
+<Tip>
+  Railway offers a free tier with $5/month credit. Perfect for testing and small deployments.
+</Tip>
+
+## Migrating from Railway
+
+If you need to migrate to another platform:
+
+<Steps>
+  <Step title="Export Database">
+    ```bash
+    railway run pg_dump -U postgres railway > formbricks-export.sql
+    ```
+  </Step>
+
+  <Step title="Download Uploads (if not using S3)">
+    If you stored files locally, export them before migrating.
+  </Step>
+
+  <Step title="Deploy to New Platform">
+    Follow the [Docker](/self-hosting/docker) or [Kubernetes](/self-hosting/kubernetes) guides.
+  </Step>
+
+  <Step title="Import Database">
+    ```bash
+    psql -h new-host -U formbricks formbricks < formbricks-export.sql
+    ```
+  </Step>
+
+  <Step title="Update DNS">
+    Point your domain to the new deployment.
+  </Step>
+</Steps>
+
+## Railway vs Other Platforms
+
+| Feature | Railway | Docker | Kubernetes |
+|---------|---------|--------|------------|
+| Setup Time | 5 minutes | 30 minutes | 1-2 hours |
+| Management Overhead | Low | Medium | High |
+| Scaling | Automatic | Manual | Automatic |
+| Cost | Pay-as-you-go | Infrastructure cost | Infrastructure cost |
+| SSL | Automatic | Manual config | Ingress config |
+| Best For | Small-medium | Single server | Enterprise |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configure Integrations" icon="puzzle-piece" href="/integrations/overview">
+    Connect Formbricks with your tools
+  </Card>
+  <Card title="Create Your First Survey" icon="clipboard-question" href="/surveys/getting-started">
+    Start collecting feedback
+  </Card>
+</CardGroup>

@@ -1,0 +1,122 @@
+---
+title: API Overview
+description: Introduction to the Formbricks API
+icon: "circle-info"
+---
+
+The Formbricks API allows you to programmatically manage surveys, responses, contacts, and webhooks. It's organized around REST principles with predictable resource-oriented URLs and standard HTTP response codes.
+
+## Base URL
+
+All API requests should be made to:
+
+```
+https://app.formbricks.com/api
+```
+
+For self-hosted instances, replace with your own domain.
+
+## API Versions
+
+Formbricks provides two API versions:
+
+- **v1** - Management API and Client API (`/api/v1/`)
+- **v2** - Enhanced Management API with improved features (`/api/v2/`)
+
+## API Types
+
+### Management API
+
+Use the Management API to manage your Formbricks resources:
+
+- Create, read, update, and delete surveys
+- Retrieve and manage responses
+- Manage contacts and contact attributes
+- Configure webhooks
+- Access action classes
+
+**Base path:** `/api/v1/management/` or `/api/v2/management/`
+
+### Client API
+
+Use the Client API for client-side operations:
+
+- Submit survey responses
+- Track survey displays
+- Manage user identification
+- Store client-side data
+
+**Base path:** `/api/v1/client/{environmentId}/` or `/api/v2/client/{environmentId}/`
+
+## Request Format
+
+All POST, PUT, and PATCH requests should use JSON in the request body:
+
+```json
+{
+  "key": "value"
+}
+```
+
+Set the `Content-Type` header to `application/json`.
+
+## Response Format
+
+All API responses are returned in JSON format:
+
+```json
+{
+  "id": "...",
+  "createdAt": "2021-01-01T00:00:00.000Z",
+  ...
+}
+```
+
+## HTTP Status Codes
+
+The API uses standard HTTP status codes:
+
+| Status Code | Description |
+|------------|-------------|
+| `200` | Success |
+| `201` | Created |
+| `400` | Bad Request - Invalid parameters |
+| `401` | Unauthorized - Invalid or missing API key |
+| `403` | Forbidden - Feature not available |
+| `404` | Not Found - Resource doesn't exist |
+| `429` | Too Many Requests - Rate limit exceeded |
+| `500` | Internal Server Error |
+
+## Error Responses
+
+Error responses include a message and optional details:
+
+```json
+{
+  "message": "Fields are missing or incorrectly formatted",
+  "details": {
+    "field": "error description"
+  }
+}
+```
+
+## CORS Support
+
+The Client API supports CORS for browser-based applications. Preflight `OPTIONS` requests are cached for 1 hour.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/api/authentication">
+    Learn how to authenticate API requests
+  </Card>
+  <Card title="Rate Limits" icon="gauge" href="/api/rate-limits">
+    Understand API rate limiting
+  </Card>
+  <Card title="Surveys" icon="list-check" href="/api/surveys">
+    Manage your surveys
+  </Card>
+  <Card title="Responses" icon="message" href="/api/responses">
+    Retrieve survey responses
+  </Card>
+</CardGroup>

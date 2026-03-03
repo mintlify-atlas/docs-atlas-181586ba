@@ -1,0 +1,323 @@
+---
+title: Multi-Language Surveys
+description: Create surveys in multiple languages with automatic translation and language switching capabilities
+icon: languages
+---
+
+Formbricks supports multi-language surveys, allowing you to reach a global audience by translating your surveys into multiple languages. Respondents can view surveys in their preferred language, with optional language switching.
+
+## Overview
+
+Multi-language support includes:
+- **Default Language**: Primary language for your survey
+- **Secondary Languages**: Additional languages enabled for translation
+- **Language Switch**: Optional toggle for respondents to change language
+- **Per-Field Translations**: Each text field can have language-specific content
+
+<Info>
+  Multi-language surveys require an Enterprise license. See your billing settings to enable this feature.
+</Info>
+
+## Setting Up Multi-Language Surveys
+
+<Steps>
+  <Step title="Enable Multi-Language">
+    In the survey editor, open the "Multiple Languages" card (marked with the Languages icon).
+  </Step>
+  
+  <Step title="Configure Workspace Languages">
+    Navigate to **Workspace Settings > Languages** to add languages to your workspace. You need at least 2 languages configured.
+  </Step>
+  
+  <Step title="Toggle Multi-Language On">
+    In the survey editor, switch the multi-language toggle to "On".
+  </Step>
+  
+  <Step title="Select Default Language">
+    Choose your primary language from the dropdown. This is the fallback if translations are missing.
+  </Step>
+  
+  <Step title="Add Secondary Languages">
+    Select additional languages you want to enable for this survey.
+  </Step>
+  
+  <Step title="Translate Content">
+    Switch between language tabs in the editor to provide translations for each field.
+  </Step>
+</Steps>
+
+## Survey Language Configuration
+
+Languages are configured in the `languages` array on the survey object:
+
+```typescript
+{
+  "languages": [
+    {
+      "enabled": true,
+      "default": true,
+      "language": {
+        "id": "lang_id",
+        "code": "en-US",
+        "alias": "English (US)",
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z",
+        "environmentId": "env_id"
+      }
+    },
+    {
+      "enabled": true,
+      "default": false,
+      "language": {
+        "id": "lang_id_2",
+        "code": "es-ES",
+        "alias": "Español",
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "updatedAt": "2024-01-01T00:00:00.000Z",
+        "environmentId": "env_id"
+      }
+    }
+  ],
+  "showLanguageSwitch": true
+}
+```
+
+## Field-Level Translations
+
+Each translatable field uses a record structure with language codes as keys:
+
+```typescript
+{
+  "elements": [
+    {
+      "id": "question_1",
+      "type": "multipleChoiceSingle",
+      "headline": {
+        "default": "What is your favorite color?",
+        "es-ES": "¿Cuál es tu color favorito?",
+        "fr-FR": "Quelle est votre couleur préférée?"
+      },
+      "subheader": {
+        "default": "Choose one option",
+        "es-ES": "Elige una opción",
+        "fr-FR": "Choisissez une option"
+      },
+      "choices": [
+        {
+          "id": "choice_1",
+          "label": {
+            "default": "Blue",
+            "es-ES": "Azul",
+            "fr-FR": "Bleu"
+          }
+        },
+        {
+          "id": "choice_2",
+          "label": {
+            "default": "Red",
+            "es-ES": "Rojo",
+            "fr-FR": "Rouge"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Configuration Examples
+
+### Example 1: Welcome Card Translation
+
+```json
+{
+  "welcomeCard": {
+    "enabled": true,
+    "timeToFinish": true,
+    "showResponseCount": false,
+    "headline": {
+      "default": "Welcome to our survey!",
+      "es-ES": "¡Bienvenido a nuestra encuesta!",
+      "de-DE": "Willkommen zu unserer Umfrage!"
+    },
+    "subheader": {
+      "default": "Your feedback helps us improve",
+      "es-ES": "Tus comentarios nos ayudan a mejorar",
+      "de-DE": "Ihr Feedback hilft uns, uns zu verbessern"
+    },
+    "buttonLabel": {
+      "default": "Start Survey",
+      "es-ES": "Iniciar encuesta",
+      "de-DE": "Umfrage starten"
+    }
+  }
+}
+```
+
+### Example 2: Multi-Language Rating Question
+
+```json
+{
+  "id": "satisfaction",
+  "type": "rating",
+  "headline": {
+    "default": "How satisfied are you with our service?",
+    "es-ES": "¿Qué tan satisfecho estás con nuestro servicio?",
+    "ja-JP": "当社のサービスにどの程度満足していますか？",
+    "ar-SA": "ما مدى رضاك عن خدمتنا؟"
+  },
+  "lowerLabel": {
+    "default": "Not satisfied",
+    "es-ES": "No satisfecho",
+    "ja-JP": "満足していない",
+    "ar-SA": "غير راضٍ"
+  },
+  "upperLabel": {
+    "default": "Very satisfied",
+    "es-ES": "Muy satisfecho",
+    "ja-JP": "非常に満足",
+    "ar-SA": "راضٍ جداً"
+  },
+  "scale": "number",
+  "range": 5
+}
+```
+
+### Example 3: Multi-Language Open Text
+
+```json
+{
+  "id": "feedback",
+  "type": "openText",
+  "headline": {
+    "default": "Please share your feedback",
+    "es-ES": "Por favor comparte tus comentarios",
+    "fr-FR": "Veuillez partager vos commentaires",
+    "zh-CN": "请分享您的反馈"
+  },
+  "placeholder": {
+    "default": "Type your feedback here...",
+    "es-ES": "Escribe tus comentarios aquí...",
+    "fr-FR": "Tapez vos commentaires ici...",
+    "zh-CN": "在此输入您的反馈..."
+  },
+  "inputType": "text"
+}
+```
+
+### Example 4: Thank You Message Translation
+
+```json
+{
+  "endings": [
+    {
+      "id": "ending_1",
+      "type": "endScreen",
+      "headline": {
+        "default": "Thank you for your feedback!",
+        "es-ES": "¡Gracias por tus comentarios!",
+        "de-DE": "Vielen Dank für Ihr Feedback!",
+        "it-IT": "Grazie per il tuo feedback!"
+      },
+      "subheader": {
+        "default": "We appreciate your time",
+        "es-ES": "Apreciamos tu tiempo",
+        "de-DE": "Wir schätzen Ihre Zeit",
+        "it-IT": "Apprezziamo il tuo tempo"
+      },
+      "buttonLabel": {
+        "default": "Close",
+        "es-ES": "Cerrar",
+        "de-DE": "Schließen",
+        "it-IT": "Chiudi"
+      }
+    }
+  ]
+}
+```
+
+## Language Switch Feature
+
+Enable respondents to change languages during the survey:
+
+```json
+{
+  "showLanguageSwitch": true,
+  "languages": [
+    {
+      "enabled": true,
+      "default": true,
+      "language": { "code": "en-US", "alias": "English" }
+    },
+    {
+      "enabled": true,
+      "default": false,
+      "language": { "code": "es-ES", "alias": "Español" }
+    },
+    {
+      "enabled": true,
+      "default": false,
+      "language": { "code": "fr-FR", "alias": "Français" }
+    }
+  ]
+}
+```
+
+<Note>
+  The language switch toggle appears only when 2 or more languages are enabled.
+</Note>
+
+## Practical Use Cases
+
+### Global Customer Feedback
+- Support customers in their native language
+- Increase response rates with localized surveys
+- Collect feedback from international markets
+
+### Employee Engagement
+- Survey distributed teams across countries
+- Ensure all employees understand questions clearly
+- Demonstrate inclusivity and cultural awareness
+
+### Product Research
+- Test product concepts in different markets
+- Gather region-specific insights
+- Validate translations before product launch
+
+### Educational Assessments
+- Support multilingual student populations
+- Provide accessibility for language learners
+- Comply with educational standards requiring multiple languages
+
+## Best Practices
+
+<Tip>
+  **Professional Translation**: For business-critical surveys, use professional translation services rather than machine translation.
+</Tip>
+
+- **Consistent Terminology**: Use the same translations across all surveys for consistency
+- **Test in Each Language**: Preview the survey in every language to check formatting
+- **Consider Text Expansion**: Some languages require more space (German often needs 30% more)
+- **Right-to-Left Support**: Test RTL languages (Arabic, Hebrew) for proper display
+- **Cultural Adaptation**: Adapt examples and references to be culturally appropriate
+- **Default Language**: Always provide complete content in the default language as fallback
+
+## Implementation Reference
+
+The multi-language implementation can be found in:
+- UI component: `apps/web/modules/ee/multi-language-surveys/components/multi-language-card.tsx:45`
+- Language utilities: `apps/web/lib/i18n/utils`
+- Language types: Database schema and `packages/database/zod/surveys.ts:68-70`
+
+## Limitations
+
+- Multi-language is an **Enterprise feature**
+- Workspace must have at least **2 languages configured**
+- Each field must be translated manually (no automatic translation)
+- Language switch requires at least **2 enabled languages**
+
+## Related Features
+
+- [Custom Styling](/surveys/features/custom-styling) - Style surveys for different cultural preferences
+- [Conditional Logic](/surveys/features/conditional-logic) - Combine with branching for region-specific flows
+- [Hidden Fields](/surveys/features/hidden-fields) - Pass user language preference as hidden field

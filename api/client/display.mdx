@@ -1,0 +1,261 @@
+---
+title: Display API
+description: Track when surveys are displayed to users
+icon: "eye"
+---
+
+The Display API allows you to track when surveys are shown to users. This data is used for analytics and to prevent over-surveying.
+
+## Create a Display
+
+Record that a survey was displayed to a user.
+
+```
+POST /api/v1/client/{environmentId}/displays
+```
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://app.formbricks.com/api/v1/client/{environmentId}/displays \
+  -H "Content-Type: application/json" \
+  -d '{
+    "surveyId": "srv_...",
+    "userId": "user_123"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/client/env_123/displays',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      surveyId: 'srv_...',
+      userId: 'user_123'
+    })
+  }
+);
+
+const display = await response.json();
+```
+
+```typescript TypeScript SDK
+import { trackDisplay } from '@formbricks/js';
+
+// This is typically handled automatically by the Formbricks SDK
+const display = await trackDisplay({
+  surveyId: 'srv_...',
+  userId: 'user_123'
+});
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="environmentId" type="string" required>
+  Your Formbricks environment ID
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="surveyId" type="string" required>
+  The ID of the survey that was displayed
+</ParamField>
+
+<ParamField body="userId" type="string">
+  The user identifier (Enterprise only - for contact tracking)
+</ParamField>
+
+### Response
+
+```json
+{
+  "id": "dsp_...",
+  "createdAt": "2021-01-01T00:00:00.000Z",
+  "updatedAt": "2021-01-01T00:00:00.000Z",
+  "surveyId": "srv_...",
+  "contactId": "con_..."
+}
+```
+
+<ResponseField name="id" type="string">
+  The unique identifier for this display event
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of when the display was recorded
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of when the display was last updated
+</ResponseField>
+
+<ResponseField name="surveyId" type="string">
+  The ID of the displayed survey
+</ResponseField>
+
+<ResponseField name="contactId" type="string | null">
+  The contact ID if user tracking is enabled
+</ResponseField>
+
+## Use Cases
+
+### Track Survey Impressions
+
+Know how many times a survey was shown, even if users didn't respond:
+
+```javascript
+// When showing a survey to a user
+await fetch('https://app.formbricks.com/api/v1/client/env_123/displays', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    surveyId: 'srv_456'
+  })
+});
+
+// Calculate response rate: responses / displays
+```
+
+### Prevent Survey Fatigue
+
+Use display data to limit how often users see surveys:
+
+```javascript
+// Check recent displays for a user
+const recentDisplays = await getRecentDisplays(userId);
+
+if (recentDisplays.length < 3) {
+  // User hasn't seen many surveys recently
+  await trackDisplay({ surveyId, userId });
+  showSurvey();
+} else {
+  // Don't over-survey this user
+  console.log('User has seen too many surveys recently');
+}
+```
+
+### Link Displays to Responses
+
+When a user responds to a survey, you can link it to the display:
+
+```javascript
+// Track display
+const display = await fetch(
+  'https://app.formbricks.com/api/v1/client/env_123/displays',
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ surveyId: 'srv_456' })
+  }
+).then(r => r.json());
+
+// When user responds, include displayId
+await fetch('https://app.formbricks.com/api/v1/client/env_123/responses', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    surveyId: 'srv_456',
+    displayId: display.id,
+    finished: true,
+    data: { qst_1: 'answer' }
+  })
+});
+```
+
+## Enterprise Features
+
+<Note>
+  User identification in displays requires an Enterprise plan. Free and Pro plans can track displays but cannot associate them with specific users.
+</Note>
+
+### User Tracking
+
+For Enterprise customers, provide a `userId` to track which users saw which surveys:
+
+```javascript
+await fetch('https://app.formbricks.com/api/v1/client/env_123/displays', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    surveyId: 'srv_456',
+    userId: 'user_123' // Enterprise only
+  })
+});
+```
+
+Non-Enterprise attempts to use `userId` will receive:
+
+```json
+{
+  "message": "User identification is only available for enterprise users."
+}
+```
+
+## CORS Support
+
+The Display API supports CORS for browser-based applications:
+
+```
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: POST, OPTIONS
+Access-Control-Allow-Headers: Content-Type
+```
+
+Preflight `OPTIONS` requests are cached for 1 hour.
+
+## Error Responses
+
+### Survey Not Found
+
+```json
+{
+  "message": "Survey not found"
+}
+```
+
+### Invalid Environment
+
+```json
+{
+  "message": "Fields are missing or incorrectly formatted",
+  "details": {
+    "environmentId": "Invalid environment ID"
+  }
+}
+```
+
+### Enterprise Feature Required
+
+```json
+{
+  "message": "User identification is only available for enterprise users."
+}
+```
+
+## Best Practices
+
+1. **Track Before Showing**: Record the display before actually showing the survey to the user
+2. **Handle Failures Gracefully**: Don't block the survey from showing if display tracking fails
+3. **Debounce**: Avoid recording multiple displays if the user refreshes the page
+4. **Privacy**: Respect user privacy and data regulations when tracking displays
+
+## Integration with Formbricks SDK
+
+If you're using the Formbricks JavaScript SDK, display tracking is handled automatically:
+
+```javascript
+import formbricks from '@formbricks/js';
+
+formbricks.init({
+  environmentId: 'env_123',
+  apiHost: 'https://app.formbricks.com'
+});
+
+// Displays are tracked automatically when surveys are shown
+```
+
+The SDK manages display tracking, response correlation, and display frequency logic for you.

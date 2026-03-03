@@ -1,0 +1,542 @@
+---
+title: SSL/TLS Certificates
+description: Configure HTTPS and SSL/TLS certificates for secure Formbricks deployments
+icon: lock
+---
+
+Secure your Formbricks instance with SSL/TLS certificates to enable HTTPS, encrypt traffic, and build trust with your users.
+
+## Overview
+
+Formbricks supports multiple SSL/TLS configuration approaches:
+
+- **Automated Let's Encrypt** (Docker with Traefik)
+- **Manual Certificate Management** (Bring your own certificates)
+- **Reverse Proxy SSL Termination** (Nginx, HAProxy, Caddy)
+- **Cloud Load Balancer SSL** (AWS ALB, GCP LB, Azure App Gateway)
+- **Kubernetes Ingress** (cert-manager, ingress-nginx)
+
+<Warning>
+Always use HTTPS in production. HTTP-only deployments expose sensitive data including:
+- User credentials during authentication
+- Survey responses and personal data
+- API keys and session tokens
+- Admin panel access
+</Warning>
+
+## Docker Deployment with Let's Encrypt
+
+The quickest way to enable SSL for Docker deployments using the official setup script.
+
+### Prerequisites
+
+- Public domain name pointing to your server (A record)
+- Ports 80 and 443 open on your firewall
+- Email address for Let's Encrypt notifications
+
+### Automated Setup
+
+The official Formbricks Docker script includes Traefik reverse proxy with automatic Let's Encrypt:
+
+```bash
+# Run the official setup script
+/bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/formbricks/formbricks/stable/docker/formbricks.sh)"
+```
+
+The script will prompt for:
+
+1. **Email Address**: For Let's Encrypt certificate registration
+2. **Domain Name**: Your fully qualified domain (e.g., `formbricks.example.com`)
+
+### What Happens Behind the Scenes
+
+1. **Traefik Setup**: Reverse proxy is configured with Let's Encrypt ACME integration
+2. **HTTP-01 Challenge**: Let's Encrypt validates domain ownership via HTTP
+3. **Certificate Issuance**: SSL certificate is automatically generated and installed
+4. **Auto-Renewal**: Certificates are automatically renewed before expiration (90 days)
+5. **HTTP Redirect**: All HTTP traffic is automatically redirected to HTTPS
+
+### Configuration Details
+
+The setup creates a Traefik configuration that:
+
+- Listens on ports 80 (HTTP) and 443 (HTTPS)
+- Forwards requests to Formbricks container
+- Manages certificate lifecycle automatically
+- Stores certificates in Docker volumes
+
+### Troubleshooting Let's Encrypt
+
+<AccordionGroup>
+  <Accordion title="Certificate Not Issuing">
+    **Common Causes:**
+    
+    1. Domain not pointing to server IP
+       ```bash
+       # Verify DNS resolution
+       dig formbricks.example.com
+       nslookup formbricks.example.com
+       ```
+    
+    2. Firewall blocking port 80
+       ```bash
+       # Check if port 80 is accessible
+       sudo ufw status
+       sudo iptables -L -n | grep 80
+       ```
+    
+    3. Rate limiting from Let's Encrypt
+       - Let's Encrypt has rate limits: 50 certificates per domain per week
+       - Use staging environment for testing: `LETSENCRYPT_STAGING=true`
+    
+    4. Check Traefik logs:
+       ```bash
+       docker logs traefik
+       ```
+  </Accordion>
+
+  <Accordion title="Certificate Renewal Failing">
+    **Solutions:**
+    
+    1. Ensure Traefik container is running continuously
+    2. Check Traefik can bind to port 80 for renewal challenges
+    3. Verify DNS still points to your server
+    4. Review Traefik renewal logs:
+       ```bash
+       docker logs traefik | grep -i renew
+       ```
+  </Accordion>
+
+  <Accordion title="Mixed Content Warnings">
+    Ensure your `WEBAPP_URL` uses HTTPS:
+    
+    ```bash
+    WEBAPP_URL=https://formbricks.example.com
+    NEXTAUTH_URL=https://formbricks.example.com
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Manual SSL Configuration
+
+### Using Custom Certificates
+
+If you have certificates from a commercial CA or internal PKI:
+
+<Steps>
+  <Step title="Obtain Certificates">
+    You'll need:
+    - Certificate file (`.crt` or `.pem`)
+    - Private key file (`.key`)
+    - Intermediate certificates/chain (if applicable)
+    
+    **Combine into full chain:**
+    ```bash
+    cat your_domain.crt intermediate.crt > fullchain.pem
+    ```
+  </Step>
+
+  <Step title="Configure Reverse Proxy">
+    Example with Nginx:
+    
+    ```nginx
+    server {
+        listen 443 ssl http2;
+        server_name formbricks.example.com;
+
+        # SSL Certificate Configuration
+        ssl_certificate /etc/nginx/ssl/fullchain.pem;
+        ssl_certificate_key /etc/nginx/ssl/private.key;
+
+        # Modern SSL Configuration
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384';
+        ssl_prefer_server_ciphers off;
+
+        # SSL Session Configuration
+        ssl_session_cache shared:SSL:10m;
+        ssl_session_timeout 10m;
+        ssl_session_tickets off;
+
+        # OCSP Stapling
+        ssl_stapling on;
+        ssl_stapling_verify on;
+        ssl_trusted_certificate /etc/nginx/ssl/chain.pem;
+        resolver 8.8.8.8 8.8.4.4 valid=300s;
+
+        # Security Headers
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header X-Content-Type-Options "nosniff" always;
+
+        # Proxy to Formbricks
+        location / {
+            proxy_pass http://localhost:3000;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection 'upgrade';
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_cache_bypass $http_upgrade;
+        }
+    }
+
+    # HTTP to HTTPS Redirect
+    server {
+        listen 80;
+        server_name formbricks.example.com;
+        return 301 https://$server_name$request_uri;
+    }
+    ```
+  </Step>
+
+  <Step title="Update Formbricks Configuration">
+    Ensure Formbricks knows it's behind HTTPS:
+    
+    ```bash
+    WEBAPP_URL=https://formbricks.example.com
+    NEXTAUTH_URL=https://formbricks.example.com
+    ```
+  </Step>
+
+  <Step title="Test Configuration">
+    ```bash
+    # Validate Nginx config
+    sudo nginx -t
+    
+    # Reload Nginx
+    sudo systemctl reload nginx
+    
+    # Test SSL configuration
+    curl -I https://formbricks.example.com
+    ```
+  </Step>
+</Steps>
+
+## Kubernetes with cert-manager
+
+For Kubernetes deployments, use cert-manager for automated certificate management.
+
+### Install cert-manager
+
+```bash
+# Add cert-manager Helm repository
+helm repo add jetstack https://charts.jetstack.io
+helm repo update
+
+# Install cert-manager
+helm install cert-manager jetstack/cert-manager \
+  --namespace cert-manager \
+  --create-namespace \
+  --version v1.13.0 \
+  --set installCRDs=true
+```
+
+### Configure ClusterIssuer
+
+<CodeGroup>
+```yaml Let's Encrypt Production
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@example.com
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+```
+
+```yaml Let's Encrypt Staging
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: admin@example.com
+    privateKeySecretRef:
+      name: letsencrypt-staging
+    solvers:
+    - http01:
+        ingress:
+          class: nginx
+```
+</CodeGroup>
+
+```bash
+# Apply the issuer
+kubectl apply -f cluster-issuer.yaml
+```
+
+### Configure Ingress with TLS
+
+Update your Formbricks Helm values:
+
+```yaml values.yaml
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: formbricks.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          serviceName: formbricks
+  tls:
+    - secretName: formbricks-tls
+      hosts:
+        - formbricks.example.com
+```
+
+Deploy with Helm:
+
+```bash
+helm upgrade --install formbricks ./charts/formbricks \
+  -f values.yaml \
+  --namespace formbricks \
+  --create-namespace
+```
+
+### Verify Certificate
+
+```bash
+# Check certificate status
+kubectl get certificate -n formbricks
+
+# Describe certificate for details
+kubectl describe certificate formbricks-tls -n formbricks
+
+# View cert-manager logs
+kubectl logs -n cert-manager deployment/cert-manager
+```
+
+## Cloud Provider SSL Options
+
+### AWS Application Load Balancer
+
+<Steps>
+  <Step title="Request Certificate in ACM">
+    ```bash
+    aws acm request-certificate \
+      --domain-name formbricks.example.com \
+      --validation-method DNS \
+      --region us-east-1
+    ```
+  </Step>
+
+  <Step title="Validate Domain Ownership">
+    Add the CNAME records provided by ACM to your DNS configuration.
+  </Step>
+
+  <Step title="Configure ALB">
+    In Kubernetes Ingress annotations:
+    
+    ```yaml
+    annotations:
+      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:xxxxx:certificate/xxxxx
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+      alb.ingress.kubernetes.io/ssl-redirect: '443'
+    ```
+  </Step>
+</Steps>
+
+### Google Cloud Load Balancer
+
+```yaml
+apiVersion: networking.gke.io/v1
+kind: ManagedCertificate
+metadata:
+  name: formbricks-cert
+spec:
+  domains:
+    - formbricks.example.com
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: formbricks
+  annotations:
+    networking.gke.io/managed-certificates: formbricks-cert
+    kubernetes.io/ingress.class: "gce"
+spec:
+  # ... ingress spec
+```
+
+### Azure Application Gateway
+
+Use Azure Key Vault for certificate storage:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: formbricks
+  annotations:
+    appgw.ingress.kubernetes.io/ssl-certificate: "formbricks-cert"
+    appgw.ingress.kubernetes.io/backend-protocol: "http"
+spec:
+  # ... ingress spec
+```
+
+## SSL Best Practices
+
+<Check>
+**Security Configuration**
+- Use TLS 1.2 and 1.3 only (disable older versions)
+- Enable HSTS header with long max-age
+- Implement OCSP stapling for faster certificate validation
+- Use strong cipher suites (prefer ECDHE)
+- Disable SSL session tickets for better forward secrecy
+</Check>
+
+<Check>
+**Certificate Management**
+- Automate certificate renewal (45 days before expiration)
+- Monitor certificate expiration with alerts
+- Use wildcard certificates for multiple subdomains (*.example.com)
+- Keep private keys secure and never commit to version control
+- Implement certificate pinning for mobile apps
+</Check>
+
+<Check>
+**Performance Optimization**
+- Enable HTTP/2 for better performance
+- Configure SSL session caching
+- Use CDN for SSL termination at edge locations
+- Implement OCSP stapling to reduce validation overhead
+</Check>
+
+## SSL Testing & Validation
+
+### Online Tools
+
+- **SSL Labs**: [https://www.ssllabs.com/ssltest/](https://www.ssllabs.com/ssltest/)
+  - Comprehensive SSL configuration analysis
+  - Grade your SSL implementation (A+ is ideal)
+  - Identify security vulnerabilities
+
+- **SSL Checker**: [https://www.sslshopper.com/ssl-checker.html](https://www.sslshopper.com/ssl-checker.html)
+  - Verify certificate installation
+  - Check certificate chain
+
+### Command Line Testing
+
+```bash
+# Test SSL connection
+openssl s_client -connect formbricks.example.com:443 -servername formbricks.example.com
+
+# Check certificate details
+openssl s_client -connect formbricks.example.com:443 -servername formbricks.example.com < /dev/null 2>&1 | openssl x509 -text -noout
+
+# Verify certificate chain
+openssl s_client -connect formbricks.example.com:443 -showcerts
+
+# Test specific TLS version
+openssl s_client -connect formbricks.example.com:443 -tls1_2
+```
+
+### Browser Testing
+
+1. Visit your Formbricks URL in a browser
+2. Click the padlock icon in the address bar
+3. View certificate details
+4. Verify:
+   - Certificate is valid and not expired
+   - Issued to correct domain
+   - Chain of trust is complete
+   - No security warnings
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Certificate Chain Incomplete">
+    **Symptom**: "This site is missing a valid, trusted certificate"
+    
+    **Solution**: Ensure full certificate chain is configured:
+    ```bash
+    # Combine certificates in correct order
+    cat domain.crt intermediate.crt root.crt > fullchain.pem
+    ```
+  </Accordion>
+
+  <Accordion title="Certificate Mismatch">
+    **Symptom**: "Certificate name does not match"
+    
+    **Solution**: 
+    - Verify certificate CN/SAN matches your domain
+    - For multi-domain, use SAN certificate or wildcard
+    - Check server_name in Nginx matches certificate
+  </Accordion>
+
+  <Accordion title="SMTP TLS Configuration">
+    For email with TLS:
+    
+    ```bash
+    # Enable TLS for SMTP (port 465)
+    SMTP_SECURE_ENABLED=1
+    SMTP_PORT=465
+    
+    # Disable certificate validation (for self-signed)
+    SMTP_REJECT_UNAUTHORIZED_TLS=0
+    ```
+  </Accordion>
+
+  <Accordion title="Proxy Headers Missing">
+    Ensure reverse proxy forwards correct headers:
+    
+    ```nginx
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Host $host;
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Certificate Providers
+
+### Free Options
+
+- **Let's Encrypt**: Free, automated, 90-day certificates
+  - Best for: Most use cases
+  - Limitations: 90-day renewal, rate limits
+
+- **ZeroSSL**: Free alternative to Let's Encrypt
+  - Best for: Alternative to Let's Encrypt
+  - Limitations: Similar to Let's Encrypt
+
+### Commercial Options
+
+- **DigiCert**: Premium certificates with warranty
+  - Best for: Enterprise deployments requiring high assurance
+  - Features: Extended validation, warranty, dedicated support
+
+- **Sectigo (Comodo)**: Affordable commercial certificates
+  - Best for: Long-term certificates (1-2 years)
+  - Features: Wildcard, multi-domain support
+
+- **GlobalSign**: Enterprise-grade certificates
+  - Best for: Organizations requiring EV certificates
+  - Features: Organizational validation, code signing
+
+## Further Resources
+
+- [Mozilla SSL Configuration Generator](https://ssl-config.mozilla.org/)
+- [SSL/TLS Best Practices (OWASP)](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Protection_Cheat_Sheet.html)
+- [Let's Encrypt Documentation](https://letsencrypt.org/docs/)
+- [cert-manager Documentation](https://cert-manager.io/docs/)
+
+<Info>
+For production deployments, always use valid SSL certificates from a trusted CA. Self-signed certificates should only be used in development or internal testing environments.
+</Info>

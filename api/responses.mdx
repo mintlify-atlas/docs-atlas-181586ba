@@ -1,0 +1,441 @@
+---
+title: Responses
+description: Retrieve and manage survey responses
+icon: "message"
+---
+
+The Responses API allows you to retrieve survey responses from the Management API and submit responses from the Client API.
+
+## The Response Object
+
+### Attributes
+
+<ResponseField name="id" type="string">
+  Unique identifier for the response
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of when the response was created
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of when the response was last updated
+</ResponseField>
+
+<ResponseField name="surveyId" type="string">
+  The ID of the survey this response belongs to
+</ResponseField>
+
+<ResponseField name="contactId" type="string | null">
+  The ID of the contact who submitted the response (if identified)
+</ResponseField>
+
+<ResponseField name="finished" type="boolean">
+  Whether the response is complete
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Response data as key-value pairs (question ID to answer)
+</ResponseField>
+
+<ResponseField name="variables" type="object">
+  Variables collected during the response (string or number values)
+</ResponseField>
+
+<ResponseField name="ttc" type="object">
+  Time to complete (in seconds) for each question
+</ResponseField>
+
+<ResponseField name="meta" type="object">
+  Metadata about the response including source, URL, userAgent, country, and action
+</ResponseField>
+
+<ResponseField name="contactAttributes" type="object | null">
+  Contact attributes at the time of response
+</ResponseField>
+
+<ResponseField name="language" type="string | null">
+  Language code of the response (e.g., "en")
+</ResponseField>
+
+## Management API
+
+Use the Management API to retrieve responses from your surveys.
+
+### List Responses
+
+<CodeGroup>
+```bash cURL
+curl "https://app.formbricks.com/api/v1/management/responses?surveyId=srv_123&limit=10" \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/management/responses?surveyId=srv_123&limit=10',
+  {
+    headers: {
+      'x-api-key': 'YOUR_API_KEY'
+    }
+  }
+);
+
+const responses = await response.json();
+```
+</CodeGroup>
+
+#### Query Parameters
+
+<ParamField query="surveyId" type="string">
+  Filter responses by survey ID
+</ParamField>
+
+<ParamField query="contactId" type="string">
+  Filter responses by contact ID
+</ParamField>
+
+<ParamField query="limit" type="number" default="10">
+  Maximum number of responses to return (1-100)
+</ParamField>
+
+<ParamField query="offset" type="number" default="0">
+  Number of responses to skip for pagination
+</ParamField>
+
+<ParamField query="startDate" type="string">
+  Filter responses created after this date (ISO 8601)
+</ParamField>
+
+<ParamField query="endDate" type="string">
+  Filter responses created before this date (ISO 8601)
+</ParamField>
+
+<ParamField query="sortBy" type="string" default="createdAt">
+  Field to sort by: `createdAt` or `updatedAt`
+</ParamField>
+
+<ParamField query="order" type="string" default="desc">
+  Sort order: `asc` or `desc`
+</ParamField>
+
+#### Response
+
+```json
+[
+  {
+    "id": "res_...",
+    "createdAt": "2021-01-01T00:00:00.000Z",
+    "updatedAt": "2021-01-01T00:00:00.000Z",
+    "surveyId": "srv_...",
+    "contactId": "con_...",
+    "finished": true,
+    "data": {
+      "qst_1": "Great product!",
+      "qst_2": 5
+    },
+    "variables": {
+      "plan": "pro"
+    },
+    "ttc": {
+      "qst_1": 12,
+      "qst_2": 3
+    },
+    "meta": {
+      "source": "https://example.com",
+      "url": "https://example.com/dashboard",
+      "userAgent": {
+        "browser": "Chrome",
+        "os": "Windows",
+        "device": "desktop"
+      },
+      "country": "US"
+    },
+    "contactAttributes": {
+      "email": "user@example.com"
+    },
+    "language": "en"
+  }
+]
+```
+
+### Retrieve a Response
+
+Get a specific response by ID.
+
+<CodeGroup>
+```bash cURL
+curl https://app.formbricks.com/api/v1/management/responses/{responseId} \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/management/responses/res_123',
+  {
+    headers: {
+      'x-api-key': 'YOUR_API_KEY'
+    }
+  }
+);
+
+const responseData = await response.json();
+```
+</CodeGroup>
+
+#### Path Parameters
+
+<ParamField path="responseId" type="string" required>
+  The ID of the response to retrieve
+</ParamField>
+
+### Delete a Response
+
+Delete a response permanently.
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE https://app.formbricks.com/api/v1/management/responses/{responseId} \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/management/responses/res_123',
+  {
+    method: 'DELETE',
+    headers: {
+      'x-api-key': 'YOUR_API_KEY'
+    }
+  }
+);
+```
+</CodeGroup>
+
+#### Path Parameters
+
+<ParamField path="responseId" type="string" required>
+  The ID of the response to delete
+</ParamField>
+
+## Client API
+
+Use the Client API to submit survey responses from your application.
+
+### Create a Response
+
+Submit a new survey response.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://app.formbricks.com/api/v1/client/{environmentId}/responses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "surveyId": "srv_...",
+    "finished": false,
+    "data": {
+      "qst_1": "This is my answer"
+    },
+    "meta": {
+      "source": "app",
+      "url": "https://example.com/page"
+    }
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/client/env_123/responses',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      surveyId: 'srv_...',
+      finished: false,
+      data: {
+        qst_1: 'This is my answer'
+      },
+      meta: {
+        source: 'app',
+        url: 'https://example.com/page'
+      }
+    })
+  }
+);
+
+const result = await response.json();
+```
+</CodeGroup>
+
+#### Path Parameters
+
+<ParamField path="environmentId" type="string" required>
+  The environment ID where the survey exists
+</ParamField>
+
+#### Body Parameters
+
+<ParamField body="surveyId" type="string" required>
+  The ID of the survey being responded to
+</ParamField>
+
+<ParamField body="finished" type="boolean" required>
+  Whether this is the final submission (true) or a partial response (false)
+</ParamField>
+
+<ParamField body="data" type="object" required>
+  Response data as question ID to answer mapping
+</ParamField>
+
+<ParamField body="userId" type="string">
+  User identifier for contact tracking (Enterprise only)
+</ParamField>
+
+<ParamField body="displayId" type="string">
+  The display ID if tracking survey displays
+</ParamField>
+
+<ParamField body="singleUseId" type="string">
+  Single-use ID for link surveys
+</ParamField>
+
+<ParamField body="language" type="string">
+  Language code for the response
+</ParamField>
+
+<ParamField body="variables" type="object">
+  Additional variables to store with the response
+</ParamField>
+
+<ParamField body="ttc" type="object">
+  Time to complete (in seconds) for each question
+</ParamField>
+
+<ParamField body="meta" type="object">
+  Metadata including source, url, and action
+</ParamField>
+
+#### Response
+
+```json
+{
+  "id": "res_...",
+  "quotaFull": false
+}
+```
+
+<ResponseField name="id" type="string">
+  The ID of the created response
+</ResponseField>
+
+<ResponseField name="quotaFull" type="boolean">
+  Whether the survey quota has been reached
+</ResponseField>
+
+### Update a Response
+
+Update an existing response (for partial submissions).
+
+<CodeGroup>
+```bash cURL
+curl -X PUT https://app.formbricks.com/api/v1/client/{environmentId}/responses/{responseId} \
+  -H "Content-Type: application/json" \
+  -d '{
+    "finished": true,
+    "data": {
+      "qst_2": 5
+    }
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/client/env_123/responses/res_456',
+  {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      finished: true,
+      data: {
+        qst_2: 5
+      }
+    })
+  }
+);
+
+const result = await response.json();
+```
+</CodeGroup>
+
+#### Path Parameters
+
+<ParamField path="environmentId" type="string" required>
+  The environment ID
+</ParamField>
+
+<ParamField path="responseId" type="string" required>
+  The ID of the response to update
+</ParamField>
+
+#### Body Parameters
+
+<ParamField body="finished" type="boolean">
+  Mark the response as finished
+</ParamField>
+
+<ParamField body="data" type="object">
+  Additional response data to merge with existing data
+</ParamField>
+
+<ParamField body="language" type="string">
+  Update the response language
+</ParamField>
+
+<ParamField body="variables" type="object">
+  Additional variables to merge
+</ParamField>
+
+<ParamField body="ttc" type="object">
+  Additional time to complete data
+</ParamField>
+
+#### Response
+
+Returns the same format as creating a response.
+
+<Note>
+  Responses marked as `finished: true` cannot be updated. You'll receive a 400 error if you attempt to update a finished response.
+</Note>
+
+## Data Validation
+
+The API validates response data against the survey's validation rules:
+
+- Required fields must be present when `finished: true`
+- Data types must match question types
+- File uploads are validated against allowed types
+- Text length limits are enforced
+
+Validation errors return a `400 Bad Request` with details:
+
+```json
+{
+  "message": "Validation failed",
+  "details": {
+    "qst_1": "This field is required"
+  }
+}
+```
+
+## Response Events
+
+When responses are created or updated, events are sent to the pipeline:
+
+- `responseCreated` - Fired when a response is first created
+- `responseUpdated` - Fired when a response is updated
+- `responseFinished` - Fired when a response is marked as finished
+
+These events trigger webhooks and integrations.

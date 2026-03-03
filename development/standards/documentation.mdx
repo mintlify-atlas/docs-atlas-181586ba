@@ -1,0 +1,610 @@
+---
+title: Documentation Standards
+description: Standards for writing and maintaining documentation
+icon: book
+---
+
+This guide outlines the standards for writing clear, comprehensive documentation for Formbricks.
+
+## Documentation Philosophy
+
+<CardGroup cols={2}>
+  <Card title="User-Focused" icon="user">
+    Write for the reader, not yourself
+  </Card>
+  <Card title="Clear & Concise" icon="sparkles">
+    Simple language, short sentences
+  </Card>
+  <Card title="Actionable" icon="bolt">
+    Provide clear steps and examples
+  </Card>
+  <Card title="Maintainable" icon="wrench">
+    Keep docs updated with code changes
+  </Card>
+</CardGroup>
+
+## MDX Format
+
+Formbricks documentation uses MDX (Markdown + JSX) with Mintlify components.
+
+### File Structure
+
+All documentation files must start with frontmatter:
+
+```mdx
+---
+title: Page Title
+description: A clear, concise description of the page content
+icon: iconName
+---
+
+Page content starts here...
+```
+
+### Frontmatter Fields
+
+- **title** (required): Page title displayed in navigation and SEO
+- **description** (required): Short description for SEO and previews
+- **icon** (optional): Icon name from [Lucide Icons](https://lucide.dev)
+
+### Heading Structure
+
+<Warning>
+Do NOT start with an H1 heading. The `title` in frontmatter becomes the H1.
+</Warning>
+
+Start with H2 (`##`) and maintain hierarchy:
+
+```mdx
+---
+title: Local Development Setup
+---
+
+## Prerequisites
+
+Before you begin...
+
+### Node.js Installation
+
+Install Node.js version 20...
+
+### Docker Setup
+
+Install Docker...
+
+## Installation Steps
+
+### Clone Repository
+
+Clone the repo...
+```
+
+### Heading Case
+
+Use **Title Case** for headings:
+
+<CodeGroup>
+```mdx Good
+## Getting Started
+## Local Development Setup
+## Database Configuration
+```
+
+```mdx Bad
+## getting started
+## Local development setup
+## DATABASE CONFIGURATION
+```
+</CodeGroup>
+
+## Mintlify Components
+
+### Cards
+
+Use cards to organize links or features:
+
+```mdx
+<CardGroup cols={2}>
+  <Card title="Local Setup" icon="laptop-code" href="/development/local-setup">
+    Set up Formbricks for local development
+  </Card>
+  <Card title="Architecture" icon="sitemap" href="/development/architecture">
+    Understand the system architecture
+  </Card>
+</CardGroup>
+```
+
+### Accordions
+
+Use accordions for collapsible content:
+
+```mdx
+<AccordionGroup>
+  <Accordion title="Node.js Installation">
+    Install Node.js version 20 or higher from [nodejs.org](https://nodejs.org)
+  </Accordion>
+  
+  <Accordion title="Docker Setup">
+    Download Docker from [docker.com](https://docker.com)
+  </Accordion>
+</AccordionGroup>
+```
+
+### Steps
+
+Use steps for sequential instructions:
+
+````mdx
+<Steps>
+  <Step title="Clone the Repository">
+    ```bash
+    git clone https://github.com/formbricks/formbricks.git
+    cd formbricks
+    ```
+  </Step>
+  
+  <Step title="Install Dependencies">
+    ```bash
+    pnpm install
+    ```
+  </Step>
+</Steps>
+````
+
+### Callouts
+
+Use callouts to highlight important information:
+
+```mdx
+<Note>
+This is a helpful note for users.
+</Note>
+
+<Tip>
+Pro tip: Use this shortcut to save time!
+</Tip>
+
+<Warning>
+Warning: This action cannot be undone.
+</Warning>
+
+<Info>
+Additional context or background information.
+</Info>
+```
+
+### Code Blocks
+
+Use fenced code blocks with language specification:
+
+````mdx
+```typescript
+const example = "code";
+```
+
+```bash
+pnpm install
+pnpm dev
+```
+
+```json
+{
+  "key": "value"
+}
+```
+````
+
+### Code Groups
+
+Show multiple code examples or comparisons:
+
+````mdx
+<CodeGroup>
+```typescript Good
+const result = await fetchData();
+```
+
+```typescript Bad
+const result = fetchData(); // Missing await!
+```
+</CodeGroup>
+````
+
+### Tabs
+
+Use tabs for different platforms or options:
+
+````mdx
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install formbricks
+    ```
+  </Tab>
+  
+  <Tab title="pnpm">
+    ```bash
+    pnpm install formbricks
+    ```
+  </Tab>
+  
+  <Tab title="yarn">
+    ```bash
+    yarn add formbricks
+    ```
+  </Tab>
+</Tabs>
+````
+
+## Writing Style
+
+### Voice and Tone
+
+- **Active voice**: "Install the dependencies" (not "Dependencies should be installed")
+- **Present tense**: "The server starts" (not "The server will start")
+- **Second person**: "You can configure" (not "One can configure")
+- **Conversational**: Friendly but professional
+
+### Clarity
+
+<CodeGroup>
+````mdx Good
+Run the following command to start the development server:
+
+```bash
+pnpm dev
+```
+
+The application will be available at http://localhost:3000.
+````
+
+````mdx Bad
+In order to facilitate the initialization of the development server, one must execute the subsequent command, which will result in the application becoming accessible via the localhost interface on port 3000.
+````
+</CodeGroup>
+
+### Sentence Length
+
+Keep sentences short and focused:
+
+- **Ideal**: 15-20 words per sentence
+- **Maximum**: 30 words
+- Break long sentences into multiple shorter ones
+
+### Lists
+
+Use lists for related items:
+
+```mdx
+The monorepo includes:
+
+- `apps/web` - Main Next.js application
+- `apps/storybook` - Component documentation
+- `packages/database` - Prisma schema and migrations
+- `packages/types` - Shared TypeScript types
+```
+
+## Code Examples
+
+### Real Examples
+
+Use real code from the codebase:
+
+<CodeGroup>
+```typescript Good
+import { prisma } from "@formbricks/database";
+import type { Survey } from "@formbricks/types/survey";
+
+export const getSurvey = async (surveyId: string): Promise<Survey> => {
+  return await prisma.survey.findUnique({
+    where: { id: surveyId },
+  });
+};
+```
+
+```typescript Bad
+// Fake, non-working example
+const data = getData();
+processData(data);
+```
+</CodeGroup>
+
+### Complete Examples
+
+Provide complete, runnable examples:
+
+```typescript
+// Complete example with imports and types
+import { cache } from "react";
+import { prisma } from "@formbricks/database";
+import type { Survey } from "@formbricks/types/survey";
+
+export const getSurvey = cache(async (surveyId: string): Promise<Survey | null> => {
+  return await prisma.survey.findUnique({
+    where: { id: surveyId },
+  });
+});
+```
+
+### Explain Non-Obvious Code
+
+Add comments to explain complex logic:
+
+```typescript
+// Calculate cache TTL based on survey status
+// Active surveys: 5 min, Draft: 1 hour, Completed: 24 hours
+const ttl = survey.status === "active" ? 300 : 
+            survey.status === "draft" ? 3600 : 86400;
+```
+
+## Commands
+
+### Always Test Commands
+
+Verify all commands work before documenting:
+
+```bash
+# Test each command
+pnpm install
+pnpm dev
+pnpm build
+```
+
+### Include Output (When Helpful)
+
+Show expected output for clarity:
+
+```bash
+$ pnpm dev
+
+> formbricks@0.0.0 dev
+> turbo run dev --parallel
+
+• Packages in scope: @formbricks/web, @formbricks/storybook
+• Running dev in 2 packages
+
+web:dev: ready - started server on 0.0.0.0:3000
+```
+
+### Explain Flags and Options
+
+```bash
+# Build all packages with force flag (bypass cache)
+pnpm build --force
+
+# Run tests with coverage report
+pnpm test:coverage
+```
+
+## Links
+
+### Internal Links
+
+Use relative paths for internal docs:
+
+```mdx
+See [Local Setup](/development/local-setup) for installation instructions.
+Check the [Code Style Guide](/development/standards/code-style).
+```
+
+### External Links
+
+Use full URLs for external resources:
+
+```mdx
+Download [Node.js](https://nodejs.org) from the official website.
+Refer to [Prisma documentation](https://prisma.io/docs) for details.
+```
+
+### Link Text
+
+Use descriptive link text:
+
+<CodeGroup>
+```mdx Good
+Read the [contribution guidelines](/development/contributing) before submitting.
+Install [Node.js version 20 or higher](https://nodejs.org).
+```
+
+```mdx Bad
+Click [here](/development/contributing) for guidelines.
+Go to [this link](https://nodejs.org) to download Node.js.
+```
+</CodeGroup>
+
+## Images
+
+### Image Guidelines
+
+- Use descriptive filenames: `survey-editor-interface.png`
+- Optimize images (compress, appropriate size)
+- Include alt text for accessibility
+- Store in `/images` directory
+
+```mdx
+![Survey editor interface](/images/survey-editor.png)
+```
+
+### Screenshots
+
+For UI documentation:
+
+- Use consistent window size
+- Highlight relevant areas
+- Keep screenshots up-to-date
+- Include captions when needed
+
+## File Organization
+
+### Naming Conventions
+
+- Use kebab-case: `local-setup.mdx`, `code-style.mdx`
+- Be descriptive: `database-migrations.mdx` not `db.mdx`
+- Group related docs in folders:
+
+```
+development/
+  overview.mdx
+  local-setup.mdx
+  architecture.mdx
+  contributing.mdx
+  standards/
+    code-style.mdx
+    testing.mdx
+    documentation.mdx
+```
+
+### Navigation
+
+Update `docs.json` when adding new pages:
+
+```json
+{
+  "group": "Development",
+  "pages": [
+    "development/overview",
+    "development/local-setup",
+    "development/architecture",
+    "development/contributing",
+    {
+      "group": "Standards",
+      "pages": [
+        "development/standards/code-style",
+        "development/standards/testing",
+        "development/standards/documentation"
+      ]
+    }
+  ]
+}
+```
+
+## Enterprise Features
+
+Mark Enterprise-only features with a note:
+
+```mdx
+## Advanced Analytics
+
+<Info>
+**Enterprise Feature**: This feature is only available with an Enterprise license.
+
+Learn more about [Enterprise Edition](/self-hosting/enterprise).
+</Info>
+
+Advanced analytics provides...
+```
+
+## API Documentation
+
+### Endpoint Documentation
+
+````mdx
+## GET /api/v1/surveys/:surveyId
+
+Retrieve a survey by ID.
+
+### Parameters
+
+- `surveyId` (string, required) - The survey ID
+
+### Response
+
+```json
+{
+  "data": {
+    "id": "survey-1",
+    "name": "Customer Satisfaction",
+    "status": "active"
+  }
+}
+```
+
+### Error Responses
+
+- `404` - Survey not found
+- `403` - Unauthorized
+````
+
+## Maintenance
+
+### Keep Docs Updated
+
+When changing code:
+
+- Update related documentation
+- Test all commands/examples
+- Update screenshots if UI changed
+- Verify links still work
+
+### Review Checklist
+
+Before submitting docs:
+
+- [ ] Frontmatter complete
+- [ ] No H1 headings in content
+- [ ] Code examples tested
+- [ ] Commands verified
+- [ ] Links work
+- [ ] Mintlify components used correctly
+- [ ] Spelling and grammar checked
+- [ ] Screenshots current (if applicable)
+
+## Common Mistakes
+
+<AccordionGroup>
+  <Accordion title="Starting with H1">
+    **Don't** start content with `#` heading. Use frontmatter `title` instead.
+    
+    ```mdx
+    ---
+    title: This is the H1
+    ---
+    
+    ## Start with H2
+    ```
+  </Accordion>
+  
+  <Accordion title="Missing Frontmatter">
+    Every MDX file must have frontmatter:
+    
+    ```mdx
+    ---
+    title: Required
+    description: Also required
+    icon: optional
+    ---
+    ```
+  </Accordion>
+  
+  <Accordion title="Untested Commands">
+    Always test commands before documenting:
+    
+    ```bash
+    # Test it first!
+    pnpm db:migrate:dev
+    ```
+  </Accordion>
+  
+  <Accordion title="Broken Links">
+    Test all links:
+    - Internal links: `/development/local-setup`
+    - External links: `https://nodejs.org`
+  </Accordion>
+</AccordionGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Mintlify Docs" icon="book" href="https://mintlify.com/docs">
+    Official Mintlify documentation
+  </Card>
+  <Card title="MDX Syntax" icon="markdown" href="https://mdxjs.com">
+    MDX syntax reference
+  </Card>
+  <Card title="Lucide Icons" icon="icons" href="https://lucide.dev">
+    Icon library reference
+  </Card>
+  <Card title="Code Style" icon="code" href="/development/standards/code-style">
+    Code style guidelines
+  </Card>
+</CardGroup>

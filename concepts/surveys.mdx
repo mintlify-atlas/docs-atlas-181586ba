@@ -1,0 +1,394 @@
+---
+title: Surveys
+description: The core building block of Formbricks—how to create, configure, and deliver surveys to your users
+icon: clipboard-question
+---
+
+Surveys are the heart of Formbricks. A survey is a collection of questions, styling, targeting rules, and display logic that determines **what** you ask users, **when** they see it, and **how** it's presented.
+
+## What is a Survey?
+
+In Formbricks, a survey is more than just a list of questions. It's a complete feedback experience that includes:
+
+- **Questions**: The data you want to collect (text, multiple choice, ratings, NPS, file uploads, etc.)
+- **Welcome Card**: An optional introduction to set context
+- **Endings**: Customizable thank-you messages or redirects
+- **Triggers**: Actions or events that show the survey to users
+- **Targeting**: Rules for who should see the survey
+- **Styling**: Colors, layout, backgrounds, and branding
+- **Logic**: Conditional questions, branching, and dynamic content
+- **Settings**: Recontact rules, closing conditions, and response limits
+
+Every survey belongs to an [Environment](/concepts/environments) and can collect responses from [Contacts](/concepts/contacts).
+
+## Survey Types
+
+Formbricks supports two primary survey types, each optimized for different use cases:
+
+### Link Surveys
+
+**Link surveys** are standalone surveys accessed via a unique URL. They're perfect for reaching users outside your application.
+
+**Use cases:**
+- Email campaigns (newsletters, transactional emails)
+- Social media posts
+- QR codes for physical locations
+- SMS campaigns
+- Market research with external audiences
+
+**Characteristics:**
+- No SDK installation required
+- Shareable via any channel
+- Can be embedded in iframes
+- Track responses by email, hidden fields, or single-use IDs
+- Optional PIN protection
+
+**Example URL:** `https://app.formbricks.com/s/product-feedback-2024`
+
+### In-Product Surveys (App & Website)
+
+**In-product surveys** are embedded directly in your web or mobile app using the Formbricks SDK. They appear contextually based on user actions.
+
+**Use cases:**
+- Feature feedback immediately after usage
+- Onboarding surveys at key milestones
+- Exit intent surveys before churn
+- NPS after successful conversions
+- Contextual help and research recruitment
+
+**Characteristics:**
+- 6-10x higher response rates than link surveys
+- Triggered by user actions (button clicks, page views, custom events)
+- Automatically linked to [Contacts](/concepts/contacts)
+- Target based on user attributes and behavior
+- Respect user preferences (recontact rules)
+
+**Trigger examples:**
+- User completes onboarding
+- User clicks "Upgrade" button
+- User visits pricing page 3+ times
+- 7 days after signup
+- After specific feature usage
+
+## Survey Structure
+
+### Welcome Card
+
+An optional introduction shown before the first question. Use it to:
+
+- Set expectations (e.g., "This will take 2 minutes")
+- Explain why you're asking for feedback
+- Build trust and increase completion rates
+- Add your logo or a friendly image
+
+**Pro tip:** Surveys with welcome cards have ~15% higher completion rates.
+
+### Questions
+
+Formbricks supports a wide variety of question types:
+
+<AccordionGroup>
+  <Accordion title="Open Text">
+    Free-form text input for qualitative feedback.
+    
+    - **Use for**: "Why?" questions, feature requests, detailed feedback
+    - **Validation**: Optional character limits, required fields
+    - **Example**: "What's the main reason you chose our product?"
+  </Accordion>
+
+  <Accordion title="Multiple Choice (Single Select)">
+    Radio buttons for selecting one option from a list.
+    
+    - **Use for**: Demographic questions, feature selection, yes/no questions
+    - **Features**: Randomize options, add "Other" field, required selection
+    - **Example**: "Which plan are you currently using?"
+  </Accordion>
+
+  <Accordion title="Multiple Choice (Multi Select)">
+    Checkboxes for selecting multiple options.
+    
+    - **Use for**: "Select all that apply" questions
+    - **Features**: Min/max selection limits, option weighting
+    - **Example**: "Which features do you use regularly?"
+  </Accordion>
+
+  <Accordion title="Rating Scale">
+    Numeric or star-based ratings.
+    
+    - **Use for**: CSAT, satisfaction, feature ratings
+    - **Options**: 1-5, 1-10, or custom ranges
+    - **Example**: "How satisfied are you with our support? (1-5)"
+  </Accordion>
+
+  <Accordion title="Net Promoter Score (NPS)">
+    Standard 0-10 scale for measuring loyalty.
+    
+    - **Automatic classification**: Detractors (0-6), Passives (7-8), Promoters (9-10)
+    - **Follow-up question**: "What's the main reason for your score?"
+    - **Example**: "How likely are you to recommend us to a friend?"
+  </Accordion>
+
+  <Accordion title="Customer Satisfaction (CSAT)">
+    Pre-configured satisfaction rating question.
+    
+    - **Standard format**: "How satisfied are you with [product]?"
+    - **Scale**: Very Unsatisfied to Very Satisfied
+    - **Automatic scoring**: Track CSAT percentage over time
+  </Accordion>
+
+  <Accordion title="File Upload">
+    Allow users to upload images, documents, or other files.
+    
+    - **Use for**: Bug reports (screenshots), feature mockups, documents
+    - **Limits**: File size, file type restrictions
+    - **Storage**: Stored securely in your configured storage backend
+  </Accordion>
+
+  <Accordion title="Contact Info">
+    Dedicated field for collecting email addresses or phone numbers.
+    
+    - **Validation**: Automatic email/phone format validation
+    - **Use for**: Interview recruitment, follow-up requests
+    - **Privacy**: Can be marked as sensitive data
+  </Accordion>
+
+  <Accordion title="Date Picker">
+    Calendar-based date selection.
+    
+    - **Use for**: Scheduling, event feedback, timeline questions
+    - **Options**: Date only, date + time, date range
+  </Accordion>
+
+  <Accordion title="Matrix">
+    Grid of questions with shared answer options.
+    
+    - **Use for**: Rating multiple features, comparing options
+    - **Example**: Rate "Ease of use", "Performance", "Design" on a 1-5 scale
+  </Accordion>
+
+  <Accordion title="Ranking">
+    Drag-and-drop to rank options in order of preference.
+    
+    - **Use for**: Feature prioritization, preference ordering
+    - **Example**: "Rank these features by importance to you"
+  </Accordion>
+</AccordionGroup>
+
+### Endings
+
+Customizable thank-you messages shown after survey completion. You can create **multiple endings** and route users based on their responses.
+
+**Ending options:**
+- Custom message with rich text formatting
+- Redirect to a URL (e.g., documentation, booking page)
+- Show different endings based on responses (e.g., thank promoters differently than detractors)
+- Display next steps or resources
+
+**Example:** If NPS < 7, show ending with support contact. If NPS ≥ 9, ask for a review.
+
+## Survey Configuration
+
+### Triggers (In-Product Surveys Only)
+
+Triggers define **when** your survey appears. You can combine multiple triggers:
+
+**Action-Based Triggers:**
+- **Page View**: When a specific URL is loaded
+- **Button Click**: When a user clicks a specific element
+- **Custom Event**: When your code fires `formbricks.track("event-name")`
+
+**Example trigger combinations:**
+```typescript
+// Trigger survey when user completes onboarding
+formbricks.track("onboarding_completed");
+
+// Trigger survey on specific page
+// Automatically detected by Formbricks SDK on page load
+```
+
+**Code Actions** are defined in your app:
+```typescript
+formbricks.track("feature_used", {
+  feature: "advanced_analytics"
+});
+```
+
+**No-Code Actions** are configured in Formbricks:
+- CSS selector clicks (e.g., `button#upgrade`)
+- URL patterns (e.g., `/dashboard/*`)
+- Element visibility
+
+### Audience Targeting
+
+Control **who** sees your survey using attribute filters:
+
+**Filter by Contact Attributes:**
+- Plan type (e.g., `plan equals "pro"`)
+- Signup date (e.g., `signup_date > 7 days ago`)
+- Location (e.g., `country equals "US"`)
+- Custom attributes (e.g., `role equals "admin"`)
+
+**Combine multiple filters:**
+- Show only to users on the free plan AND signed up > 30 days ago
+- Show only to users in the US OR Canada AND visited pricing page
+
+**Example use case:** Survey only free plan users who have been active for 30+ days to understand upgrade barriers.
+
+### Recontact Options
+
+Prevent survey fatigue by controlling how often users see surveys:
+
+**Display Options:**
+- **Display once**: Show the survey only one time ever
+- **Display multiple times**: Show on every trigger event
+- **Display X times**: Limit to a specific number of displays
+
+**Recontact Days:**
+- Wait X days before showing ANY survey to a user again
+- Prevents overwhelming users with multiple surveys
+- Configurable per survey and globally per project
+
+<Warning>
+  **Testing tip:** When testing surveys, set display to "Display multiple times" and recontact days to 0. Otherwise, you'll only see the survey once!
+</Warning>
+
+### Response Limits
+
+Automatically close surveys when conditions are met:
+
+- **Response limit**: Close after X total responses
+- **Date limit**: Close on a specific date
+- **Manual close**: Pause or complete the survey anytime
+
+**Example:** Run a quarterly NPS survey that closes after 500 responses or 7 days, whichever comes first.
+
+## Advanced Features
+
+### Logic & Branching
+
+Create dynamic survey experiences based on user responses:
+
+**Jump Logic:**
+- Skip questions based on previous answers
+- Show different question paths for different user segments
+- End the survey early based on disqualifying answers
+
+**Example:** If user answers "No" to "Do you use Feature X?", skip detailed Feature X questions.
+
+### Variables & Personalization
+
+Use variables to personalize survey content:
+
+```typescript
+formbricks.setContact({
+  userId: "user-123",
+  attributes: {
+    firstName: "Sarah",
+    plan: "Pro"
+  }
+});
+```
+
+In your survey: "Hey {{firstName}}, how are you enjoying the {{plan}} plan?"
+
+**Result:** "Hey Sarah, how are you enjoying the Pro plan?"
+
+### Hidden Fields
+
+Pass metadata to surveys without showing it to users:
+
+- Track campaign source (`utm_source`, `utm_campaign`)
+- Include user metadata (ID, segment, experiment group)
+- Pass context from your app (feature flag state, A/B test variant)
+
+**Example link survey URL:**
+```
+https://app.formbricks.com/s/feedback?source=email&campaign=onboarding
+```
+
+Hidden fields appear in response data for filtering and analysis.
+
+### Multi-Language Surveys
+
+Create surveys in multiple languages:
+
+1. Enable multi-language in project settings
+2. Add translations for each question
+3. Users can switch languages or auto-detect based on browser settings
+
+**Supported:** Any language with i18n support
+
+### Quotas
+
+Set response quotas for specific segments to ensure balanced data:
+
+**Example:** Collect exactly 100 responses from free users and 100 from paid users. Once a quota is hit, show different ending or skip those users.
+
+**Use cases:**
+- Market research with balanced demographics
+- A/B testing survey variants
+- Screening for user interviews
+
+## Survey Lifecycle
+
+<Steps>
+  <Step title="Draft">
+    Survey is being built. Not accessible to users. Editable without restrictions.
+  </Step>
+  <Step title="In Progress">
+    Survey is live and collecting responses. Edits are limited to prevent data inconsistency.
+  </Step>
+  <Step title="Paused">
+    Temporarily stop collecting responses. Resume anytime without losing data.
+  </Step>
+  <Step title="Completed">
+    Survey is closed. No new responses accepted. Archive for future reference.
+  </Step>
+</Steps>
+
+<Note>
+  **Important:** You cannot add or remove questions from a live survey. To make major changes, duplicate the survey, edit the copy, and publish it as a new survey.
+</Note>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep Surveys Short">
+    Aim for fewer than 5 questions and under 2 minutes to complete. Completion rates drop sharply after 3 minutes.
+  </Accordion>
+  <Accordion title="Ask One Thing Per Question">
+    Avoid "How satisfied are you with our speed and design?" Instead, ask two separate questions.
+  </Accordion>
+  <Accordion title="Use Templates">
+    Formbricks provides battle-tested templates for NPS, PMF, CSAT, and more. Start there and customize.
+  </Accordion>
+  <Accordion title="Add Context in Welcome Cards">
+    Tell users why you're asking and how long it will take. Increases trust and completion.
+  </Accordion>
+  <Accordion title="Test Before Publishing">
+    Always test in development environment first. Check all logic paths and endings.
+  </Accordion>
+  <Accordion title="Set Recontact Rules">
+    Respect your users' time. Don't survey them more than once every 30 days unless critical.
+  </Accordion>
+  <Accordion title="Follow Up on Feedback">
+    Close the loop! Email users who provided valuable feedback to thank them or share how you used their input.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Environments" icon="layer-group" href="/concepts/environments">
+    Learn how to separate development and production data
+  </Card>
+  <Card title="Contacts" icon="users" href="/concepts/contacts">
+    Understand how Formbricks tracks individual users
+  </Card>
+  <Card title="Responses" icon="message" href="/concepts/responses">
+    Dive into response data structure and filtering
+  </Card>
+  <Card title="Survey Templates" icon="copy" href="/templates">
+    Browse pre-built surveys for common use cases
+  </Card>
+</CardGroup>

@@ -1,0 +1,185 @@
+---
+title: Single Select
+description: Allow respondents to choose one option from a list of choices
+---
+
+The Single Select question type (also called Multiple Choice Single) allows respondents to select exactly one option from a predefined list of choices.
+
+## Configuration
+
+### Basic Properties
+
+```typescript
+type TSurveyMultipleChoiceSingleElement = {
+  id: string;                    // Unique identifier
+  type: "multipleChoiceSingle";  // Question type
+  headline: TI18nString;         // Main question text (required)
+  subheader?: TI18nString;       // Optional descriptive text
+  required: boolean;             // Whether response is mandatory
+  choices: TSurveyElementChoice[]; // List of options (min: 2)
+  shuffleOption?: "none" | "all" | "exceptLast"; // Randomization
+  otherOptionPlaceholder?: TI18nString; // Custom "Other" input placeholder
+  displayType?: "list" | "dropdown"; // How to display options
+  imageUrl?: string;             // Optional image URL
+  videoUrl?: string;             // Optional video URL
+  isDraft?: boolean;             // Mark as draft
+};
+
+type TSurveyElementChoice = {
+  id: string;                    // Unique choice identifier
+  label: TI18nString;           // Choice text
+};
+```
+
+### Choices
+
+Define at least 2 choices for your question:
+
+```typescript
+choices: [
+  { id: "yes", label: { default: "Yes" } },
+  { id: "no", label: { default: "No" } },
+  { id: "maybe", label: { default: "Maybe" } }
+]
+```
+
+**Requirements:**
+- Minimum 2 choices required
+- Each choice must have a unique `id`
+- Choice labels cannot be duplicates within the same language
+
+### Shuffle Options
+
+Randomize the order of choices to reduce bias:
+
+- **none** (default): Display choices in the order defined
+- **all**: Randomize all choices
+- **exceptLast**: Randomize all except the last choice (useful for "Other" or "None of the above")
+
+### Display Types
+
+Control how options are presented:
+
+- **list** (default): Show all options as radio buttons
+- **dropdown**: Show options in a dropdown/select menu (useful for long lists)
+
+## Use Cases
+
+### Simple Yes/No
+
+```typescript
+{
+  id: "recommend",
+  type: "multipleChoiceSingle",
+  headline: { default: "Would you recommend us to a friend?" },
+  required: true,
+  choices: [
+    { id: "yes", label: { default: "Yes" } },
+    { id: "no", label: { default: "No" } }
+  ]
+}
+```
+
+### Multiple Options
+
+```typescript
+{
+  id: "department",
+  type: "multipleChoiceSingle",
+  headline: { default: "Which department do you work in?" },
+  required: true,
+  choices: [
+    { id: "sales", label: { default: "Sales" } },
+    { id: "marketing", label: { default: "Marketing" } },
+    { id: "engineering", label: { default: "Engineering" } },
+    { id: "support", label: { default: "Customer Support" } },
+    { id: "other", label: { default: "Other" } }
+  ],
+  shuffleOption: "exceptLast"
+}
+```
+
+### With "Other" Option
+
+Provide a free-text option for responses not in your list:
+
+```typescript
+{
+  id: "learn_about",
+  type: "multipleChoiceSingle",
+  headline: { default: "How did you hear about us?" },
+  required: true,
+  choices: [
+    { id: "google", label: { default: "Google Search" } },
+    { id: "social", label: { default: "Social Media" } },
+    { id: "friend", label: { default: "Friend or Colleague" } },
+    { id: "other", label: { default: "Other" } }
+  ],
+  otherOptionPlaceholder: { default: "Please specify..." },
+  shuffleOption: "exceptLast"
+}
+```
+
+### Dropdown for Long Lists
+
+Use dropdown display for many options:
+
+```typescript
+{
+  id: "country",
+  type: "multipleChoiceSingle",
+  headline: { default: "What country are you from?" },
+  required: true,
+  displayType: "dropdown",
+  choices: [
+    { id: "us", label: { default: "United States" } },
+    { id: "uk", label: { default: "United Kingdom" } },
+    { id: "ca", label: { default: "Canada" } },
+    { id: "au", label: { default: "Australia" } },
+    // ... many more countries
+  ]
+}
+```
+
+### Randomized Options
+
+Reduce order bias with shuffling:
+
+```typescript
+{
+  id: "favorite_feature",
+  type: "multipleChoiceSingle",
+  headline: { default: "What's your favorite feature?" },
+  required: false,
+  choices: [
+    { id: "feature_a", label: { default: "Feature A" } },
+    { id: "feature_b", label: { default: "Feature B" } },
+    { id: "feature_c", label: { default: "Feature C" } },
+    { id: "none", label: { default: "None of the above" } }
+  ],
+  shuffleOption: "exceptLast"
+}
+```
+
+## Best Practices
+
+1. **Keep choices mutually exclusive**: Each option should be clearly distinct
+2. **Use 2-7 choices when possible**: Too many options can overwhelm respondents
+3. **Consider dropdown for 10+ options**: Improves mobile experience with long lists
+4. **Add "Other" for unknown responses**: Let respondents provide alternatives
+5. **Shuffle when testing preferences**: Reduce position bias in A/B testing
+6. **Keep "Other"/"None" last**: Use `shuffleOption: "exceptLast"` to maintain context
+7. **Use clear, concise labels**: Each choice should be easy to understand at a glance
+
+## Accessibility
+
+- Radio buttons provide clear single-selection semantics
+- Keyboard navigation works with arrow keys
+- Screen readers announce the total number of options
+- Required fields are properly labeled for assistive technologies
+
+## Related Question Types
+
+- [Multi Select](/surveys/questions/multi-select) - Allow multiple selections
+- [Rating](/surveys/questions/rating) - For satisfaction or agreement scales
+- [NPS](/surveys/questions/nps) - For Net Promoter Score

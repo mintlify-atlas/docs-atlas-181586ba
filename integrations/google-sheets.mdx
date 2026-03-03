@@ -1,0 +1,326 @@
+---
+title: Google Sheets Integration
+description: Automatically populate Google Sheets with survey responses from Formbricks.
+---
+
+The Google Sheets integration allows you to send survey responses directly to Google Sheets as they arrive. Perfect for data analysis, reporting, and sharing insights with your team.
+
+## What Gets Synced
+
+When a response is submitted to a linked survey:
+
+- Each response adds a new row to your sheet
+- The first row contains question labels (headers)
+- Selected questions are mapped to columns
+- Data syncs in real-time as responses arrive
+- Existing data in the sheet is preserved
+
+## Setup for Formbricks Cloud
+
+<Steps>
+  <Step title="Navigate to Integrations">
+    In your Formbricks dashboard, go to **Configuration** > **Integrations** and click **Connect** on the Google Sheets card.
+    
+    ![Formbricks Integrations Tab](/images/xm-and-surveys/core-features/integrations/google-sheets/integrations-tab.webp)
+  </Step>
+
+  <Step title="Connect with Google">
+    Click **Connect with Google** to start the OAuth flow.
+    
+    ![Connect Formbricks with your Google](/images/xm-and-surveys/core-features/integrations/google-sheets/connect-with-google.webp)
+  </Step>
+
+  <Step title="Authorize Google Account">
+    Select your Google account and grant Formbricks permission to:
+    - View your email address (for identification)
+    - Access Google Sheets in your Google Drive
+  </Step>
+
+  <Step title="Confirm Connection">
+    After authorization, you'll return to Formbricks and see a connected status.
+    
+    ![Formbricks is now connected with Google](/images/xm-and-surveys/core-features/integrations/google-sheets/google-connected.webp)
+  </Step>
+
+  <Step title="Prepare Your Sheet">
+    Create a Google Sheet or select an existing one. Formbricks will:
+    - Add headers in row 1
+    - Append responses starting from row 2
+    
+    <Warning>
+      Formbricks requires edit access to the sheet. Ensure it's not view-only.
+    </Warning>
+  </Step>
+
+  <Step title="Link a Sheet">
+    Click **Link New Sheet** to open the configuration modal.
+    
+    ![Link Formbricks with a Google Sheet](/images/xm-and-surveys/core-features/integrations/google-sheets/link-survey-with-sheet.webp)
+  </Step>
+
+  <Step title="Configure Sync">
+    1. Paste the Google Sheet URL
+    2. Select the survey to sync
+    3. Choose which questions to include as columns
+    4. Click **Link Sheet**
+    
+    ![Select question to link with Google Sheet](/images/xm-and-surveys/core-features/integrations/google-sheets/link-with-questions.webp)
+    
+    <Note>
+      The sheet URL should look like:
+      `https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit`
+    </Note>
+  </Step>
+
+  <Step title="Verify Setup">
+    Your linked sheet appears in the list. New responses will now automatically populate the sheet!
+    
+    ![List of linked Google Sheets](/images/xm-and-surveys/core-features/integrations/google-sheets/list-linked-surveys.webp)
+  </Step>
+</Steps>
+
+## Self-Hosted Setup
+
+To enable Google Sheets integration on a self-hosted instance, you need to create a Google Cloud project with OAuth credentials.
+
+<Note>
+  This setup requires a Google Cloud account and familiarity with Google Cloud Console.
+</Note>
+
+<Steps>
+  <Step title="Create Google Cloud Project">
+    1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+    2. Create a new project or select an existing one
+  </Step>
+
+  <Step title="Enable Google Sheets API">
+    1. In your project, go to **APIs & Services** > **Library**
+    2. Search for "Google Sheets API"
+    3. Click **Enable**
+  </Step>
+
+  <Step title="Configure OAuth Consent Screen">
+    1. Go to **APIs & Services** > **OAuth consent screen**
+    2. Select **External** user type (unless using Google Workspace)
+    3. Fill in app information:
+       - App name: "Formbricks"
+       - User support email: Your email
+       - Developer contact: Your email
+    4. Add scopes:
+       - `auth/userinfo.email`
+       - `auth/spreadsheets`
+    5. Save and continue
+  </Step>
+
+  <Step title="Create OAuth Credentials">
+    1. Go to **APIs & Services** > **Credentials**
+    2. Click **Create Credentials** > **OAuth client ID**
+    3. Choose **Web application**
+    4. Add authorized redirect URI:
+       ```
+       https://<your-domain>/api/google-sheet/callback
+       ```
+       For local: `http://localhost:3000/api/google-sheet/callback`
+  </Step>
+
+  <Step title="Copy Credentials">
+    After creation, copy:
+    - **Client ID**
+    - **Client Secret**
+  </Step>
+
+  <Step title="Set Environment Variables">
+    Add to your Formbricks `.env` file:
+    
+    ```bash
+    GOOGLE_SHEETS_CLIENT_ID=<your-client-id>
+    GOOGLE_SHEETS_CLIENT_SECRET=<your-client-secret>
+    GOOGLE_SHEETS_REDIRECT_URL=https://<your-domain>/api/google-sheet/callback
+    ```
+  </Step>
+
+  <Step title="Restart Formbricks">
+    Restart your instance to apply the changes.
+  </Step>
+</Steps>
+
+## Data Format
+
+Your Google Sheet will be structured as follows:
+
+| Question 1 | Question 2 | Rating | Submitted At |
+|-----------|-----------|--------|-------------|
+| Answer 1A | Answer 2A | 5 | 2024-03-15 10:30 |
+| Answer 1B | Answer 2B | 4 | 2024-03-15 11:45 |
+
+- **Row 1**: Question labels (headers)
+- **Row 2+**: Response data (one row per response)
+- Headers are updated when you link the sheet
+- Long text is automatically truncated if it exceeds Google Sheets' cell limit
+
+## API Implementation
+
+The integration uses Google Sheets API v4:
+
+### Authorization Flow
+
+```typescript
+// OAuth2 authentication
+const oAuth2Client = new google.auth.OAuth2(
+  GOOGLE_SHEETS_CLIENT_ID,
+  GOOGLE_SHEETS_CLIENT_SECRET,
+  GOOGLE_SHEETS_REDIRECT_URL
+);
+
+// Token refresh when expired
+const { credentials } = await oAuth2Client.refreshAccessToken();
+```
+
+### Writing Headers
+
+```typescript
+sheets.spreadsheets.values.update({
+  spreadsheetId: spreadsheetId,
+  range: "A1",
+  valueInputOption: "RAW",
+  resource: {
+    values: [["Question 1", "Question 2", "Rating"]]
+  }
+});
+```
+
+### Appending Responses
+
+```typescript
+sheets.spreadsheets.values.append({
+  spreadsheetId: spreadsheetId,
+  range: "A2",
+  valueInputOption: "RAW",
+  resource: {
+    values: [["Answer 1", "Answer 2", "5"]]
+  }
+});
+```
+
+Implementation is in `apps/web/lib/googleSheet/service.ts:writeData()`.
+
+## Permissions & Privacy
+
+### What Formbricks Accesses
+
+<AccordionGroup>
+  <Accordion title="Your Email ID">
+    Used for authentication and to identify your Google account. ([See code](https://github.com/formbricks/formbricks/blob/main/apps/web/app/api/google-sheet/callback/route.ts#L47))
+  </Accordion>
+
+  <Accordion title="Google Sheets Names and IDs">
+    Fetched to show you available sheets for linking.
+  </Accordion>
+
+  <Accordion title="Write Access to Selected Sheet">
+    Only the specific sheet you link receives write access for adding response data. ([See code](https://github.com/formbricks/formbricks/blob/main/packages/lib/googleSheet/service.ts#L70))
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+  Formbricks stores minimal personal information and only accesses sheets you explicitly select.
+</Note>
+
+## Remove Integration
+
+<Steps>
+  <Step title="Open Integrations">
+    Go to **Configuration** > **Integrations**
+  </Step>
+
+  <Step title="Manage Sheets">
+    Click **Manage Sheets** on the Google Sheets card
+  </Step>
+
+  <Step title="Delete">
+    Click **Delete Integration** and confirm
+  </Step>
+</Steps>
+
+![Delete Google Integration](/images/xm-and-surveys/core-features/integrations/google-sheets/delete-connection.webp)
+
+<Warning>
+  Deleting the integration removes all sheet links. Existing data in Google Sheets remains untouched, but new responses won't sync.
+</Warning>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Permission denied error">
+    Ensure:
+    - You have edit access to the Google Sheet
+    - The sheet isn't protected or restricted
+    - You haven't revoked Formbricks' access in Google account settings
+    
+    Try disconnecting and reconnecting the integration.
+  </Accordion>
+
+  <Accordion title="Responses not appearing">
+    Check:
+    - The survey is linked to the correct sheet
+    - The sheet URL is valid and hasn't changed
+    - Responses are fully submitted (not partial)
+    - The sheet hasn't been deleted
+  </Accordion>
+
+  <Accordion title="Token expired">
+    Formbricks automatically refreshes expired tokens. If you see persistent errors:
+    1. Delete the integration
+    2. Reconnect to get a fresh OAuth token
+  </Accordion>
+
+  <Accordion title="Headers not updating">
+    Headers are set when you link the sheet. If you change survey questions:
+    1. Unlink the sheet
+    2. Re-link it to update headers
+    
+    Alternatively, manually edit row 1 in Google Sheets.
+  </Accordion>
+
+  <Accordion title="Truncated text">
+    Google Sheets has a 50,000 character limit per cell. Long responses are automatically truncated. Consider:
+    - Using shorter question types
+    - Storing full responses in a database instead
+    - Using the Notion integration for long-form content
+  </Accordion>
+</AccordionGroup>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Dedicated Sheets" icon="file">
+    Create a new sheet for each survey to keep data organized and avoid conflicts
+  </Card>
+  
+  <Card title="Add Formulas" icon="calculator">
+    Use Google Sheets formulas to calculate averages, NPS scores, or sentiment analysis
+  </Card>
+  
+  <Card title="Create Charts" icon="chart-line">
+    Build visualizations to track trends and share insights with stakeholders
+  </Card>
+  
+  <Card title="Set Up Filters" icon="filter">
+    Use filters and pivot tables to analyze specific segments or time periods
+  </Card>
+</CardGroup>
+
+## Advanced: Sheets API Limits
+
+Google Sheets API has rate limits:
+
+- **Read requests**: 300 per minute per project
+- **Write requests**: 300 per minute per project
+- **Cells**: 10 million cells per spreadsheet
+
+For high-volume surveys, consider:
+- Using webhooks for custom processing
+- Splitting responses across multiple sheets
+- Implementing batching logic in your own webhook handler
+
+Need help? [Join our GitHub Discussions](https://github.com/formbricks/formbricks/discussions)!

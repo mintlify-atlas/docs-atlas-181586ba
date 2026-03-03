@@ -1,0 +1,282 @@
+---
+title: Multi Select
+description: Allow respondents to choose multiple options from a list of choices
+---
+
+The Multi Select question type (also called Multiple Choice Multi) allows respondents to select one or more options from a predefined list of choices.
+
+## Configuration
+
+### Basic Properties
+
+```typescript
+type TSurveyMultipleChoiceMultiElement = {
+  id: string;                    // Unique identifier
+  type: "multipleChoiceMulti";   // Question type
+  headline: TI18nString;         // Main question text (required)
+  subheader?: TI18nString;       // Optional descriptive text
+  required: boolean;             // Whether response is mandatory
+  choices: TSurveyElementChoice[]; // List of options (min: 2)
+  shuffleOption?: "none" | "all" | "exceptLast"; // Randomization
+  otherOptionPlaceholder?: TI18nString; // Custom "Other" input placeholder
+  displayType?: "list" | "dropdown"; // How to display options
+  validation?: TValidation;      // Advanced validation rules
+  imageUrl?: string;             // Optional image URL
+  videoUrl?: string;             // Optional video URL
+  isDraft?: boolean;             // Mark as draft
+};
+
+type TSurveyElementChoice = {
+  id: string;                    // Unique choice identifier
+  label: TI18nString;           // Choice text
+};
+```
+
+### Choices
+
+Define at least 2 choices for your question:
+
+```typescript
+choices: [
+  { id: "email", label: { default: "Email" } },
+  { id: "phone", label: { default: "Phone" } },
+  { id: "sms", label: { default: "SMS" } },
+  { id: "mail", label: { default: "Postal Mail" } }
+]
+```
+
+**Requirements:**
+- Minimum 2 choices required
+- Each choice must have a unique `id`
+- Choice labels cannot be duplicates within the same language
+
+### Validation Rules
+
+Control the number of selections allowed:
+
+```typescript
+validation: {
+  logic: "and" | "or",           // How to combine multiple rules
+  rules: [
+    {
+      id: "min_selections",
+      type: "minSelections",
+      params: { min: 1 }          // Minimum selections required
+    },
+    {
+      id: "max_selections",
+      type: "maxSelections",
+      params: { max: 3 }          // Maximum selections allowed
+    }
+  ]
+}
+```
+
+**Available validation types:**
+- `minSelections`: Require at least N selections
+- `maxSelections`: Limit to at most N selections
+
+### Shuffle Options
+
+Randomize the order of choices:
+
+- **none** (default): Display choices in the order defined
+- **all**: Randomize all choices
+- **exceptLast**: Randomize all except the last choice
+
+### Display Types
+
+- **list** (default): Show all options as checkboxes
+- **dropdown**: Show options in a multi-select dropdown
+
+## Use Cases
+
+### Select Multiple Features
+
+```typescript
+{
+  id: "interested_features",
+  type: "multipleChoiceMulti",
+  headline: { default: "Which features are you interested in?" },
+  subheader: { default: "Select all that apply" },
+  required: true,
+  choices: [
+    { id: "analytics", label: { default: "Analytics Dashboard" } },
+    { id: "reporting", label: { default: "Advanced Reporting" } },
+    { id: "api", label: { default: "API Access" } },
+    { id: "integrations", label: { default: "Third-party Integrations" } },
+    { id: "support", label: { default: "Priority Support" } }
+  ]
+}
+```
+
+### Limited Selections
+
+Restrict the number of selections:
+
+```typescript
+{
+  id: "top_priorities",
+  type: "multipleChoiceMulti",
+  headline: { default: "What are your top 3 priorities?" },
+  subheader: { default: "Select up to 3 options" },
+  required: true,
+  choices: [
+    { id: "speed", label: { default: "Performance & Speed" } },
+    { id: "features", label: { default: "Feature Set" } },
+    { id: "price", label: { default: "Pricing" } },
+    { id: "support", label: { default: "Customer Support" } },
+    { id: "security", label: { default: "Security" } },
+    { id: "ux", label: { default: "User Experience" } }
+  ],
+  validation: {
+    logic: "and",
+    rules: [
+      {
+        id: "min_one",
+        type: "minSelections",
+        params: { min: 1 }
+      },
+      {
+        id: "max_three",
+        type: "maxSelections",
+        params: { max: 3 }
+      }
+    ]
+  }
+}
+```
+
+### With "Other" Option
+
+```typescript
+{
+  id: "communication_channels",
+  type: "multipleChoiceMulti",
+  headline: { default: "How do you prefer to be contacted?" },
+  subheader: { default: "Select all that apply" },
+  required: true,
+  choices: [
+    { id: "email", label: { default: "Email" } },
+    { id: "phone", label: { default: "Phone Call" } },
+    { id: "sms", label: { default: "Text Message" } },
+    { id: "slack", label: { default: "Slack" } },
+    { id: "other", label: { default: "Other" } }
+  ],
+  otherOptionPlaceholder: { default: "Please specify your preferred method" },
+  shuffleOption: "exceptLast"
+}
+```
+
+### Randomized Survey
+
+Reduce bias with randomization:
+
+```typescript
+{
+  id: "product_aspects",
+  type: "multipleChoiceMulti",
+  headline: { default: "What aspects of the product do you use regularly?" },
+  required: false,
+  choices: [
+    { id: "dashboard", label: { default: "Dashboard" } },
+    { id: "reports", label: { default: "Reports" } },
+    { id: "alerts", label: { default: "Alerts" } },
+    { id: "api", label: { default: "API" } },
+    { id: "none", label: { default: "I don't use any of these" } }
+  ],
+  shuffleOption: "exceptLast"
+}
+```
+
+### Required Minimum
+
+Ensure at least one selection:
+
+```typescript
+{
+  id: "pain_points",
+  type: "multipleChoiceMulti",
+  headline: { default: "What challenges are you facing?" },
+  subheader: { default: "Select at least one" },
+  required: true,
+  choices: [
+    { id: "onboarding", label: { default: "Difficult onboarding" } },
+    { id: "performance", label: { default: "Performance issues" } },
+    { id: "bugs", label: { default: "Software bugs" } },
+    { id: "support", label: { default: "Lack of support" } },
+    { id: "documentation", label: { default: "Poor documentation" } }
+  ],
+  validation: {
+    logic: "and",
+    rules: [
+      {
+        id: "at_least_one",
+        type: "minSelections",
+        params: { min: 1 }
+      }
+    ]
+  }
+}
+```
+
+## Best Practices
+
+1. **Indicate "select all that apply"**: Make it clear multiple selections are allowed
+2. **Use validation to limit choices**: Prevent overwhelming responses with max selections
+3. **Consider minimum selections**: Ensure meaningful responses with min validation
+4. **Add "None of the above"**: Provide an exclusive option when applicable
+5. **Use clear, distinct labels**: Avoid overlapping or confusing options
+6. **Shuffle to reduce bias**: Randomize options in research surveys
+7. **Keep lists manageable**: 5-10 options is ideal; use dropdown for longer lists
+
+## Validation Examples
+
+### Exactly N Selections
+
+Require a specific number of choices:
+
+```typescript
+validation: {
+  logic: "and",
+  rules: [
+    { id: "min", type: "minSelections", params: { min: 3 } },
+    { id: "max", type: "maxSelections", params: { max: 3 } }
+  ]
+}
+```
+
+### At Least N Selections
+
+```typescript
+validation: {
+  logic: "and",
+  rules: [
+    { id: "min", type: "minSelections", params: { min: 2 } }
+  ]
+}
+```
+
+### At Most N Selections
+
+```typescript
+validation: {
+  logic: "and",
+  rules: [
+    { id: "max", type: "maxSelections", params: { max: 5 } }
+  ]
+}
+```
+
+## Accessibility
+
+- Checkboxes provide clear multi-selection semantics
+- Keyboard navigation with Tab and Space keys
+- Screen readers announce how many options are selected
+- Validation errors are announced to screen readers
+- Required fields are properly labeled
+
+## Related Question Types
+
+- [Single Select](/surveys/questions/single-select) - For single choice selection
+- [Ranking](/surveys/questions/ranking) - Order options by preference

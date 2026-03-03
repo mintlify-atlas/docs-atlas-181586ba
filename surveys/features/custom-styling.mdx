@@ -1,0 +1,402 @@
+---
+title: Custom Styling
+description: Customize the appearance of your surveys with colors, fonts, backgrounds, and CSS to match your brand
+icon: palette
+---
+
+Formbricks provides extensive styling options to customize the look and feel of your surveys. You can apply branding at the project level or override styles for individual surveys.
+
+## Styling Hierarchy
+
+Formbricks uses a hierarchical styling system:
+
+1. **Project-level styling**: Base styles applied to all surveys
+2. **Survey-level styling**: Overrides project styles for specific surveys
+3. **Allow style overwrite**: Project setting that controls whether surveys can override styles
+
+```typescript
+// The styling resolution logic
+if (!project.styling.allowStyleOverwrite) {
+  // Always use project styling
+  return project.styling;
+}
+
+if (survey.styling?.overwriteThemeStyling) {
+  // Survey overrides enabled
+  return survey.styling;
+}
+
+// Default to project styling
+return project.styling;
+```
+
+Reference: `apps/web/lib/utils/styling.ts:3`
+
+## Survey Styling Configuration
+
+The `styling` object on a survey includes numerous customization options:
+
+```typescript
+{
+  "styling": {
+    "brandColor": {
+      "light": "#6366f1",
+      "dark": "#818cf8"
+    },
+    "questionColor": {
+      "light": "#1e293b",
+      "dark": "#f1f5f9"
+    },
+    "inputColor": {
+      "light": "#ffffff",
+      "dark": "#1e293b"
+    },
+    "inputBorderColor": {
+      "light": "#e2e8f0",
+      "dark": "#475569"
+    },
+    "cardBackgroundColor": {
+      "light": "#ffffff",
+      "dark": "#0f172a"
+    },
+    "cardBorderColor": {
+      "light": "#e2e8f0",
+      "dark": "#334155"
+    },
+    "highlightBorderColor": {
+      "light": "#6366f1",
+      "dark": "#818cf8"
+    },
+    "isDarkModeEnabled": false,
+    "roundness": 8,
+    "cardArrangement": {
+      "linkSurveys": "straight",
+      "appSurveys": "casual"
+    },
+    "background": {
+      "bg": "#f8fafc",
+      "bgType": "color",
+      "brightness": 100
+    },
+    "hideProgressBar": false,
+    "isLogoHidden": false,
+    "logo": {
+      "url": "https://example.com/logo.png",
+      "bgColor": "#ffffff"
+    },
+    "overwriteThemeStyling": true
+  }
+}
+```
+
+## Styling Properties
+
+### Colors
+
+All color properties support light and dark mode variants:
+
+```typescript
+{
+  "light": "#6366f1",  // Color for light mode
+  "dark": "#818cf8"    // Color for dark mode (optional)
+}
+```
+
+**Available Color Properties:**
+- `brandColor` - Primary brand color for buttons and accents
+- `questionColor` - Question text color
+- `inputColor` - Input field background color
+- `inputBorderColor` - Input field border color
+- `cardBackgroundColor` - Survey card background
+- `cardBorderColor` - Survey card border
+- `highlightBorderColor` - Highlight color for focused elements
+
+### Card Arrangement
+
+Control the visual style of survey cards:
+
+```typescript
+{
+  "cardArrangement": {
+    "linkSurveys": "casual" | "straight" | "simple",
+    "appSurveys": "casual" | "straight" | "simple"
+  }
+}
+```
+
+- **casual**: Slightly tilted, playful appearance
+- **straight**: Clean, aligned cards
+- **simple**: Minimal styling
+
+### Background
+
+Customize the survey background:
+
+```typescript
+{
+  "background": {
+    "bg": "#f8fafc" | "url" | "gradient",
+    "bgType": "color" | "image" | "upload" | "animation",
+    "brightness": 0-200  // Percentage, 100 = normal
+  }
+}
+```
+
+### Logo
+
+Add your brand logo:
+
+```typescript
+{
+  "logo": {
+    "url": "https://cdn.example.com/logo.png",
+    "bgColor": "#ffffff"  // Background color behind logo
+  },
+  "isLogoHidden": false
+}
+```
+
+### Other Options
+
+- `roundness`: Border radius (0-20)
+- `hideProgressBar`: Hide/show progress indicator
+- `isDarkModeEnabled`: Enable dark mode support
+
+## Configuration Examples
+
+### Example 1: Brand-Matched Survey
+
+```json
+{
+  "styling": {
+    "brandColor": {
+      "light": "#0066cc",
+      "dark": "#3399ff"
+    },
+    "cardBackgroundColor": {
+      "light": "#ffffff"
+    },
+    "cardBorderColor": {
+      "light": "#0066cc"
+    },
+    "roundness": 12,
+    "cardArrangement": {
+      "linkSurveys": "straight",
+      "appSurveys": "straight"
+    },
+    "logo": {
+      "url": "https://yourbrand.com/logo.svg",
+      "bgColor": "#ffffff"
+    },
+    "overwriteThemeStyling": true
+  }
+}
+```
+
+### Example 2: Dark Mode Survey
+
+```json
+{
+  "styling": {
+    "isDarkModeEnabled": true,
+    "brandColor": {
+      "light": "#6366f1",
+      "dark": "#818cf8"
+    },
+    "questionColor": {
+      "light": "#1e293b",
+      "dark": "#f1f5f9"
+    },
+    "cardBackgroundColor": {
+      "light": "#ffffff",
+      "dark": "#0f172a"
+    },
+    "cardBorderColor": {
+      "light": "#e2e8f0",
+      "dark": "#334155"
+    },
+    "inputColor": {
+      "light": "#ffffff",
+      "dark": "#1e293b"
+    },
+    "inputBorderColor": {
+      "light": "#cbd5e1",
+      "dark": "#475569"
+    },
+    "background": {
+      "bg": "#0f172a",
+      "bgType": "color"
+    },
+    "overwriteThemeStyling": true
+  }
+}
+```
+
+### Example 3: Minimal Clean Design
+
+```json
+{
+  "styling": {
+    "brandColor": {
+      "light": "#000000"
+    },
+    "questionColor": {
+      "light": "#000000"
+    },
+    "cardBackgroundColor": {
+      "light": "#ffffff"
+    },
+    "cardBorderColor": {
+      "light": "#f1f5f9"
+    },
+    "roundness": 0,
+    "cardArrangement": {
+      "linkSurveys": "simple",
+      "appSurveys": "simple"
+    },
+    "hideProgressBar": true,
+    "isLogoHidden": true,
+    "background": {
+      "bg": "#fafafa",
+      "bgType": "color"
+    },
+    "overwriteThemeStyling": true
+  }
+}
+```
+
+### Example 4: Vibrant Gradient Background
+
+```json
+{
+  "styling": {
+    "brandColor": {
+      "light": "#ec4899"
+    },
+    "cardBackgroundColor": {
+      "light": "rgba(255, 255, 255, 0.95)"
+    },
+    "cardBorderColor": {
+      "light": "transparent"
+    },
+    "roundness": 16,
+    "cardArrangement": {
+      "linkSurveys": "casual",
+      "appSurveys": "casual"
+    },
+    "background": {
+      "bg": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      "bgType": "color",
+      "brightness": 100
+    },
+    "hideProgressBar": false,
+    "overwriteThemeStyling": true
+  }
+}
+```
+
+### Example 5: Upload Custom Background
+
+```json
+{
+  "styling": {
+    "brandColor": {
+      "light": "#10b981"
+    },
+    "cardBackgroundColor": {
+      "light": "rgba(255, 255, 255, 0.9)"
+    },
+    "roundness": 12,
+    "background": {
+      "bg": "/uploads/backgrounds/pattern-bg.jpg",
+      "bgType": "upload",
+      "brightness": 80
+    },
+    "overwriteThemeStyling": true
+  }
+}
+```
+
+## Advanced Styling with CSS
+
+For even more control, you can use custom CSS classes and CSS variables. The survey container includes data attributes you can target:
+
+```css
+/* Target survey cards */
+[data-survey-card] {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Customize buttons */
+[data-survey-card] button[type="submit"] {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Style inputs */
+[data-survey-card] input,
+[data-survey-card] textarea {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Customize progress bar */
+[data-survey-card] [data-progress-bar] {
+  height: 6px;
+  border-radius: 3px;
+}
+```
+
+## Practical Use Cases
+
+### E-commerce Survey
+- Match your store's branding
+- Use product colors in survey design
+- Add product images as background
+
+### Corporate Feedback
+- Apply company brand guidelines
+- Use corporate color palette
+- Include company logo
+- Professional, clean appearance
+
+### Event Surveys
+- Match event theme colors
+- Use event photos as backgrounds
+- Create excitement with vibrant colors
+
+### App In-Product Surveys
+- Seamlessly blend with app design
+- Match app's color scheme
+- Use same fonts and spacing
+- Minimize visual disruption
+
+## Best Practices
+
+<Tip>
+  **Accessibility First**: Ensure sufficient color contrast (WCAG AA minimum 4.5:1 for text).
+</Tip>
+
+<Warning>
+  **Test on Devices**: Preview your styled surveys on mobile, tablet, and desktop to ensure responsiveness.
+</Warning>
+
+- **Consistent Branding**: Match your website/app colors for cohesive experience
+- **Readable Text**: Use high-contrast colors for questions and answers
+- **Mobile Optimization**: Test roundness and spacing on small screens
+- **Performance**: Optimize background images (use WebP, compress files)
+- **Dark Mode**: Provide dark variants if your audience prefers dark mode
+- **Progressive Enhancement**: Ensure surveys work even if custom CSS fails to load
+
+## Implementation Reference
+
+Styling implementation can be found in:
+- Type definitions: `packages/types/styling.ts`
+- Styling utilities: `apps/web/lib/utils/styling.ts`
+- Survey schema: `packages/database/zod/surveys.ts:163-183`
+
+## Related Features
+
+- [Multi-Language](/surveys/features/multi-language) - Style different languages appropriately
+- [Webhooks](/surveys/features/webhooks) - Send styled survey responses
+- [Conditional Logic](/surveys/features/conditional-logic) - Different styles for different paths

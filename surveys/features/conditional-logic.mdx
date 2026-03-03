@@ -1,0 +1,334 @@
+---
+title: Conditional Logic
+description: Implement branching and skip logic in your surveys to create dynamic, personalized survey experiences
+icon: split
+---
+
+Conditional logic (also known as branching or skip logic) allows you to create dynamic survey flows that adapt based on respondent answers. This enables you to show different questions or jump to specific sections depending on how users respond.
+
+## How Conditional Logic Works
+
+Conditional logic in Formbricks uses a conditions-and-actions pattern:
+- **Conditions**: Define rules based on element responses, variables, or hidden fields
+- **Actions**: Specify what happens when conditions are met (e.g., jump to a specific block or ending)
+
+## Setting Up Conditional Logic
+
+<Steps>
+  <Step title="Open Survey Editor">
+    Navigate to your survey in the Formbricks dashboard and open the editor.
+  </Step>
+  
+  <Step title="Add Logic to a Block">
+    Click on any question block, then look for the "Conditional Logic" section with the split icon.
+  </Step>
+  
+  <Step title="Create Logic Rules">
+    Click "Add Logic" to create your first conditional rule. Each rule consists of:
+    - **Conditions**: One or more criteria that must be met
+    - **Actions**: What happens when the conditions are satisfied
+  </Step>
+  
+  <Step title="Configure Fallback (Optional)">
+    If you have multiple logic rules, you can set a fallback action for when none of the conditions match.
+  </Step>
+</Steps>
+
+## Logic Structure
+
+Conditional logic is defined in the `logic` array on each survey block:
+
+```typescript
+{
+  id: string;
+  conditions: {
+    id: string;
+    connector: "and" | "or";
+    conditions: Array<SingleCondition | ConditionGroup>;
+  };
+  actions: Array<{
+    id: string;
+    objective: "jumpToBlock" | "jumpToEnding";
+    target: string; // Block ID or Ending ID
+  }>;
+}
+```
+
+### Condition Types
+
+**Left Operand** can reference:
+- `element` - A question/element response
+- `variable` - A survey variable
+- `hiddenField` - A hidden field value
+
+**Operators** include:
+- Equality: `equals`, `doesNotEqual`
+- String matching: `contains`, `startsWith`, `endsWith`
+- Comparison: `isGreaterThan`, `isLessThan`
+- State checks: `isSubmitted`, `isSkipped`, `isEmpty`, `isNotEmpty`
+- Array operations: `equalsOneOf`, `includesAllOf`, `includesOneOf`
+
+See the complete list in `packages/types/surveys/logic.ts:8`.
+
+## Configuration Examples
+
+### Example 1: Simple Skip Logic
+
+Show different questions based on a Yes/No answer:
+
+```json
+{
+  "id": "block_1",
+  "elements": [
+    {
+      "id": "question_1",
+      "type": "multipleChoiceSingle",
+      "headline": { "default": "Do you own a car?" },
+      "choices": [
+        { "id": "yes", "label": { "default": "Yes" } },
+        { "id": "no", "label": { "default": "No" } }
+      ]
+    }
+  ],
+  "logic": [
+    {
+      "id": "logic_1",
+      "conditions": {
+        "id": "cond_group_1",
+        "connector": "and",
+        "conditions": [
+          {
+            "id": "cond_1",
+            "leftOperand": {
+              "type": "element",
+              "value": "question_1"
+            },
+            "operator": "equals",
+            "rightOperand": {
+              "type": "static",
+              "value": "yes"
+            }
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "action_1",
+          "objective": "jumpToBlock",
+          "target": "car_owner_questions"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Example 2: Multiple Conditions with OR Logic
+
+Jump to a specific block if user selects any of multiple options:
+
+```json
+{
+  "logic": [
+    {
+      "id": "logic_1",
+      "conditions": {
+        "id": "cond_group_1",
+        "connector": "or",
+        "conditions": [
+          {
+            "id": "cond_1",
+            "leftOperand": {
+              "type": "element",
+              "value": "satisfaction_rating"
+            },
+            "operator": "isLessThanOrEqual",
+            "rightOperand": {
+              "type": "static",
+              "value": 3
+            }
+          },
+          {
+            "id": "cond_2",
+            "leftOperand": {
+              "type": "element",
+              "value": "would_recommend"
+            },
+            "operator": "equals",
+            "rightOperand": {
+              "type": "static",
+              "value": "no"
+            }
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "action_1",
+          "objective": "jumpToBlock",
+          "target": "improvement_feedback"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Example 3: Nested Condition Groups
+
+Complex logic with nested AND/OR conditions:
+
+```json
+{
+  "logic": [
+    {
+      "id": "logic_1",
+      "conditions": {
+        "id": "root_group",
+        "connector": "and",
+        "conditions": [
+          {
+            "id": "cond_1",
+            "leftOperand": {
+              "type": "element",
+              "value": "user_type"
+            },
+            "operator": "equals",
+            "rightOperand": {
+              "type": "static",
+              "value": "business"
+            }
+          },
+          {
+            "id": "nested_group",
+            "connector": "or",
+            "conditions": [
+              {
+                "id": "cond_2",
+                "leftOperand": {
+                  "type": "element",
+                  "value": "company_size"
+                },
+                "operator": "isGreaterThan",
+                "rightOperand": {
+                  "type": "static",
+                  "value": 50
+                }
+              },
+              {
+                "id": "cond_3",
+                "leftOperand": {
+                  "type": "element",
+                  "value": "revenue"
+                },
+                "operator": "isGreaterThan",
+                "rightOperand": {
+                  "type": "static",
+                  "value": 1000000
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "action_1",
+          "objective": "jumpToBlock",
+          "target": "enterprise_questions"
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Example 4: Using Hidden Fields in Logic
+
+Branch based on hidden field values:
+
+```json
+{
+  "logic": [
+    {
+      "id": "logic_1",
+      "conditions": {
+        "id": "cond_group_1",
+        "connector": "and",
+        "conditions": [
+          {
+            "id": "cond_1",
+            "leftOperand": {
+              "type": "hiddenField",
+              "value": "user_segment"
+            },
+            "operator": "equals",
+            "rightOperand": {
+              "type": "static",
+              "value": "premium"
+            }
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "action_1",
+          "objective": "jumpToBlock",
+          "target": "premium_user_survey"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## Practical Use Cases
+
+### Customer Satisfaction Survey
+- If rating ≤ 3, ask about specific pain points
+- If rating ≥ 4, ask about favorite features
+- If rating = 5, request a testimonial or review
+
+### Product Qualification
+- Skip technical questions for non-technical users
+- Show pricing questions only to decision-makers
+- Display different feature sets based on user role
+
+### Multi-Path Onboarding
+- Different flows for individual vs. business users
+- Customize questions based on company size
+- Skip irrelevant sections based on use case
+
+### Feedback Collection
+- Show bug report form if user experienced issues
+- Request feature suggestions from power users
+- Collect different data from new vs. returning users
+
+## Best Practices
+
+<Tip>
+  **Start Simple**: Begin with basic branching logic and add complexity as needed. Test each logic path thoroughly.
+</Tip>
+
+<Warning>
+  **Avoid Logic Loops**: Ensure your logic doesn't create circular paths that could trap respondents in an infinite loop.
+</Warning>
+
+- **Test All Paths**: Use survey preview to test every possible logic branch
+- **Use Descriptive Names**: Label blocks clearly so logic rules are easy to understand
+- **Document Complex Logic**: Keep notes on complex branching patterns
+- **Consider Fallbacks**: Always define what happens when no conditions match
+- **Limit Nesting Depth**: Deep nesting can make logic hard to maintain
+
+## Implementation Reference
+
+The conditional logic implementation can be found in:
+- Type definitions: `packages/types/surveys/logic.ts`
+- UI component: `apps/web/modules/survey/editor/components/conditional-logic.tsx:42`
+- Logic editor: `apps/web/modules/survey/editor/components/logic-editor`
+
+## Related Features
+
+- [Hidden Fields](/surveys/features/hidden-fields) - Pass data for use in conditional logic
+- [Multi-Language](/surveys/features/multi-language) - Combine with i18n for localized branching
+- [Webhooks](/surveys/features/webhooks) - Trigger different webhooks based on survey paths

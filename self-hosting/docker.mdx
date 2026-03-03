@@ -1,0 +1,437 @@
+---
+title: Docker Deployment
+description: Deploy Formbricks using Docker and Docker Compose
+icon: docker
+---
+
+Deploy Formbricks on any server using Docker and Docker Compose. This method is ideal for single-server deployments and development environments.
+
+## Prerequisites
+
+- A Linux server (Ubuntu 20.04+ recommended)
+- SSH access to the server
+- A domain name pointing to your server (for SSL)
+- Minimum 4GB RAM and 2 CPU cores
+
+## Quick Start (Automated Setup)
+
+The fastest way to deploy Formbricks with Docker is using our automated setup script:
+
+<Steps>
+  <Step title="Run the Installation Script">
+    Execute the following command on your server:
+
+    ```bash
+    /bin/sh -c "$(curl -fsSL https://raw.githubusercontent.com/formbricks/formbricks/stable/docker/formbricks.sh)"
+    ```
+
+    The script will:
+    - Install Docker and Docker Compose if not present
+    - Set up Traefik as a reverse proxy
+    - Configure SSL certificates via Let's Encrypt
+    - Deploy Formbricks with PostgreSQL and Redis
+  </Step>
+
+  <Step title="Provide Required Information">
+    The script will prompt you for:
+
+    1. **Email Address**: For SSL certificate registration with Let's Encrypt
+    2. **Domain Name**: Your Formbricks domain (e.g., `formbricks.example.com`)
+
+    <Info>
+      Ensure your domain's A record points to your server's IP address before running the script.
+    </Info>
+  </Step>
+
+  <Step title="Access Your Instance">
+    After the script completes, visit your domain in a browser. You should see the Formbricks setup wizard.
+
+    Complete the wizard to create your first admin account and organization.
+  </Step>
+</Steps>
+
+## Manual Setup
+
+For more control over the deployment, you can manually configure Docker Compose:
+
+<Steps>
+  <Step title="Create Project Directory">
+    ```bash
+    mkdir formbricks && cd formbricks
+    ```
+  </Step>
+
+  <Step title="Download docker-compose.yml">
+    Create a `docker-compose.yml` file with the following content:
+
+    ```yaml docker-compose.yml
+    x-environment: &environment
+      environment:
+        # Required Configuration
+        WEBAPP_URL: https://formbricks.example.com
+        NEXTAUTH_URL: https://formbricks.example.com
+        
+        # Database Connection
+        DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/formbricks?schema=public"
+        
+        # Generate these with: openssl rand -hex 32
+        NEXTAUTH_SECRET: # Add your secret here
+        ENCRYPTION_KEY: # Add your secret here
+        CRON_SECRET: # Add your secret here
+        
+        # Redis Cache
+        REDIS_URL: redis://redis:6379
+        
+        # Disable email features (or configure SMTP below)
+        EMAIL_VERIFICATION_DISABLED: 1
+        PASSWORD_RESET_DISABLED: 1
+        
+        # Optional: SMTP Configuration
+        # MAIL_FROM: noreply@example.com
+        # MAIL_FROM_NAME: Formbricks
+        # SMTP_HOST: smtp.example.com
+        # SMTP_PORT: 587
+        # SMTP_USER: your-user
+        # SMTP_PASSWORD: your-password
+        # SMTP_SECURE_ENABLED: 1
+
+    services:
+      postgres:
+        restart: always
+        image: pgvector/pgvector:pg17
+        volumes:
+          - postgres:/var/lib/postgresql/data
+        environment:
+          - POSTGRES_PASSWORD=postgres
+        healthcheck:
+          test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
+          interval: 5s
+          timeout: 3s
+          retries: 30
+          start_period: 30s
+
+      redis:
+        restart: always
+        image: valkey/valkey:latest
+        command: valkey-server --appendonly yes
+        volumes:
+          - redis:/data
+        healthcheck:
+          test: ["CMD", "valkey-cli", "ping"]
+          interval: 5s
+          timeout: 3s
+          retries: 30
+          start_period: 10s
+
+      formbricks:
+        restart: always
+        image: ghcr.io/formbricks/formbricks:latest
+        depends_on:
+          postgres:
+            condition: service_healthy
+          redis:
+            condition: service_healthy
+        ports:
+          - 3000:3000
+        volumes:
+          - ./uploads:/home/nextjs/apps/web/uploads
+        <<: *environment
+
+    volumes:
+      postgres:
+        driver: local
+      redis:
+        driver: local
+    ```
+  </Step>
+
+  <Step title="Generate Secret Keys">
+    Generate three secure keys for your deployment:
+
+    ```bash
+    openssl rand -hex 32  # For NEXTAUTH_SECRET
+    openssl rand -hex 32  # For ENCRYPTION_KEY
+    openssl rand -hex 32  # For CRON_SECRET
+    ```
+
+    Add these to the `docker-compose.yml` file in the environment section.
+  </Step>
+
+  <Step title="Configure Your Domain">
+    Update the `WEBAPP_URL` and `NEXTAUTH_URL` values in the compose file:
+
+    ```yaml
+    WEBAPP_URL: https://your-domain.com
+    NEXTAUTH_URL: https://your-domain.com
+    ```
+  </Step>
+
+  <Step title="Start the Services">
+    Launch all services:
+
+    ```bash
+    docker compose up -d
+    ```
+
+    Check the logs to ensure everything started correctly:
+
+    ```bash
+    docker compose logs -f formbricks
+    ```
+  </Step>
+</Steps>
+
+## Configuration Reference
+
+### Essential Environment Variables
+
+The following variables must be configured:
+
+| Variable | Description | Example |
+|----------|-------------|----------|
+| `WEBAPP_URL` | Public URL of your Formbricks instance | `https://formbricks.example.com` |
+| `NEXTAUTH_URL` | NextAuth URL (same as WEBAPP_URL) | `https://formbricks.example.com` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://user:pass@host:5432/db` |
+| `REDIS_URL` | Redis connection string | `redis://redis:6379` |
+| `NEXTAUTH_SECRET` | NextAuth encryption secret | Generated with `openssl rand -hex 32` |
+| `ENCRYPTION_KEY` | 2FA & link encryption key | Generated with `openssl rand -hex 32` |
+| `CRON_SECRET` | API secret for cron jobs | Generated with `openssl rand -hex 32` |
+
+### Optional Features
+
+<AccordionGroup>
+  <Accordion title="Enable Email Verification">
+    Configure SMTP and enable email features:
+
+    ```yaml
+    environment:
+      EMAIL_VERIFICATION_DISABLED: 0
+      PASSWORD_RESET_DISABLED: 0
+      MAIL_FROM: noreply@example.com
+      MAIL_FROM_NAME: Formbricks
+      SMTP_HOST: smtp.gmail.com
+      SMTP_PORT: 587
+      SMTP_USER: your-email@gmail.com
+      SMTP_PASSWORD: your-app-password
+      SMTP_SECURE_ENABLED: 1
+    ```
+  </Accordion>
+
+  <Accordion title="S3 File Storage">
+    Store file uploads in S3:
+
+    ```yaml
+    environment:
+      S3_ACCESS_KEY: your-access-key
+      S3_SECRET_KEY: your-secret-key
+      S3_REGION: us-east-1
+      S3_BUCKET_NAME: formbricks-uploads
+      # For S3-compatible storage (MinIO, StorJ, etc.)
+      S3_ENDPOINT_URL: https://s3.example.com
+      S3_FORCE_PATH_STYLE: 0
+    ```
+  </Accordion>
+
+  <Accordion title="OAuth Authentication">
+    Enable GitHub, Google, or Azure AD login:
+
+    ```yaml
+    environment:
+      # GitHub
+      GITHUB_ID: your-github-client-id
+      GITHUB_SECRET: your-github-client-secret
+      
+      # Google
+      GOOGLE_CLIENT_ID: your-google-client-id
+      GOOGLE_CLIENT_SECRET: your-google-client-secret
+      
+      # Azure AD
+      AZUREAD_CLIENT_ID: your-azure-client-id
+      AZUREAD_CLIENT_SECRET: your-azure-client-secret
+      AZUREAD_TENANT_ID: your-tenant-id
+    ```
+  </Accordion>
+
+  <Accordion title="Enterprise License">
+    Activate Enterprise features:
+
+    ```yaml
+    environment:
+      ENTERPRISE_LICENSE_KEY: your-license-key
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## SSL/TLS Configuration
+
+### Using Traefik (Recommended)
+
+The automated setup script uses Traefik for automatic SSL. To manually configure Traefik:
+
+1. Traefik will automatically obtain certificates from Let's Encrypt
+2. Certificates are renewed automatically
+3. HTTP traffic is redirected to HTTPS
+
+### Using Nginx
+
+If you prefer Nginx as a reverse proxy:
+
+```nginx
+server {
+    listen 80;
+    server_name formbricks.example.com;
+    return 301 https://$server_name$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name formbricks.example.com;
+
+    ssl_certificate /etc/letsencrypt/live/formbricks.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/formbricks.example.com/privkey.pem;
+
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+## Updating Formbricks
+
+<Steps>
+  <Step title="Pull the Latest Image">
+    ```bash
+    docker compose pull formbricks
+    ```
+  </Step>
+
+  <Step title="Restart the Container">
+    ```bash
+    docker compose up -d formbricks
+    ```
+
+    The database migrations will run automatically on startup.
+  </Step>
+
+  <Step title="Verify the Update">
+    Check the logs to ensure the update was successful:
+
+    ```bash
+    docker compose logs -f formbricks
+    ```
+  </Step>
+</Steps>
+
+## Backup and Restore
+
+### Backup Database
+
+```bash
+docker compose exec postgres pg_dump -U postgres formbricks > backup.sql
+```
+
+### Restore Database
+
+```bash
+docker compose exec -T postgres psql -U postgres formbricks < backup.sql
+```
+
+### Backup Volumes
+
+```bash
+# Backup PostgreSQL data
+docker run --rm -v formbricks_postgres:/data -v $(pwd):/backup \
+  ubuntu tar czf /backup/postgres-backup.tar.gz /data
+
+# Backup Redis data
+docker run --rm -v formbricks_redis:/data -v $(pwd):/backup \
+  ubuntu tar czf /backup/redis-backup.tar.gz /data
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Container won't start">
+    Check the logs for error messages:
+
+    ```bash
+    docker compose logs formbricks
+    ```
+
+    Common issues:
+    - Missing or invalid environment variables
+    - Database connection failures
+    - Port 3000 already in use
+  </Accordion>
+
+  <Accordion title="Database connection failed">
+    Ensure PostgreSQL is healthy:
+
+    ```bash
+    docker compose ps postgres
+    ```
+
+    Test the connection:
+
+    ```bash
+    docker compose exec postgres psql -U postgres -c "SELECT 1;"
+    ```
+  </Accordion>
+
+  <Accordion title="SSL certificate issues">
+    If using the automated script:
+    - Ensure your domain's A record points to your server
+    - Check that ports 80 and 443 are open
+    - Wait a few minutes for DNS propagation
+
+    View Traefik logs:
+
+    ```bash
+    docker logs traefik
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Performance Tuning
+
+### Increase PostgreSQL Performance
+
+Add PostgreSQL tuning to your compose file:
+
+```yaml
+postgres:
+  environment:
+    - POSTGRES_PASSWORD=postgres
+  command:
+    - "postgres"
+    - "-c"
+    - "shared_buffers=256MB"
+    - "-c"
+    - "max_connections=200"
+    - "-c"
+    - "work_mem=16MB"
+```
+
+### Redis Persistence
+
+The default configuration uses AOF (Append-Only File) for Redis persistence, which provides good durability. Adjust if needed:
+
+```yaml
+redis:
+  command: valkey-server --appendonly yes --appendfsync everysec
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configure Integrations" icon="puzzle-piece" href="/integrations/overview">
+    Connect Formbricks with your tools
+  </Card>
+  <Card title="Create Your First Survey" icon="clipboard-question" href="/surveys/getting-started">
+    Start collecting feedback
+  </Card>
+</CardGroup>

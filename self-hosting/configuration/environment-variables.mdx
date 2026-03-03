@@ -1,0 +1,527 @@
+---
+title: Environment Variables
+description: Complete reference for all Formbricks environment variables
+icon: code
+---
+
+## Overview
+
+This page provides a comprehensive reference for all environment variables available in Formbricks. Environment variables allow you to configure your self-hosted instance without modifying code.
+
+## Required Variables
+
+These variables are mandatory for Formbricks to function properly.
+
+### Core Configuration
+
+<ParamField path="WEBAPP_URL" type="string" required>
+  The base URL where your Formbricks instance is hosted.
+  
+  **Example:** `http://localhost:3000` or `https://formbricks.example.com`
+</ParamField>
+
+<ParamField path="NEXTAUTH_URL" type="string" required>
+  Should be the same as `WEBAPP_URL`. Required for NextAuth authentication.
+  
+  If your application uses a custom base path, specify the full route to the API endpoint.
+  
+  **Example:** `https://example.com/custom-route/api/auth`
+</ParamField>
+
+<ParamField path="ENCRYPTION_KEY" type="string" required>
+  Encryption key for securing sensitive data. Generate using:
+  
+  ```bash
+  openssl rand -hex 32
+  ```
+</ParamField>
+
+<ParamField path="NEXTAUTH_SECRET" type="string" required>
+  Secret for NextAuth.js session encryption. Generate using:
+  
+  ```bash
+  openssl rand -hex 32
+  ```
+  
+  See [NextAuth.js docs](https://next-auth.js.org/configuration/options#nextauth_secret) for more details.
+</ParamField>
+
+<ParamField path="CRON_SECRET" type="string" required>
+  Secret for running cron jobs securely. Generate using:
+  
+  ```bash
+  openssl rand -hex 32
+  ```
+</ParamField>
+
+<ParamField path="DATABASE_URL" type="string" required>
+  PostgreSQL database connection string.
+  
+  **Example:** `postgresql://postgres:postgres@localhost:5432/formbricks?schema=public`
+</ParamField>
+
+### Email Configuration (Required for email features)
+
+<ParamField path="MAIL_FROM" type="string">
+  Email address used as the sender for all outgoing emails.
+  
+  **Example:** `noreply@example.com`
+</ParamField>
+
+<ParamField path="MAIL_FROM_NAME" type="string">
+  Display name for the sender email address.
+  
+  **Default:** `Formbricks`
+</ParamField>
+
+<ParamField path="SMTP_HOST" type="string">
+  SMTP server hostname.
+  
+  **Example:** `smtp.gmail.com` or `localhost`
+</ParamField>
+
+<ParamField path="SMTP_PORT" type="string">
+  SMTP server port.
+  
+  **Common values:** `587` (TLS), `465` (SSL), `1025` (local development)
+</ParamField>
+
+<ParamField path="SMTP_USER" type="string">
+  Username for SMTP authentication.
+</ParamField>
+
+<ParamField path="SMTP_PASSWORD" type="string">
+  Password for SMTP authentication.
+</ParamField>
+
+## Optional Variables
+
+### Logging
+
+<ParamField path="LOG_LEVEL" type="string" default="info">
+  Minimum log level to output.
+  
+  **Options:** `debug`, `info`, `warn`, `error`, `fatal`
+</ParamField>
+
+### Base Path
+
+<ParamField path="BASE_PATH" type="string">
+  Deploy the application under a sub-path of a domain. Can only be set at build time.
+  
+  **Example:** `/formbricks`
+</ParamField>
+
+### SMTP Advanced Configuration
+
+<ParamField path="SMTP_SECURE_ENABLED" type="string" default="0">
+  Enable TLS for SMTP connection (port 465).
+  
+  **Options:** `0` (disabled), `1` (enabled)
+</ParamField>
+
+<ParamField path="SMTP_AUTHENTICATED" type="string" default="1">
+  Require SMTP authentication.
+  
+  **Options:** `0` (no authentication), `1` (authentication required)
+</ParamField>
+
+<ParamField path="SMTP_REJECT_UNAUTHORIZED_TLS" type="string" default="1">
+  Accept connections without requiring authorization from the list of supplied CAs.
+  
+  **Options:** `0` (accept unauthorized), `1` (reject unauthorized)
+</ParamField>
+
+### Storage Configuration
+
+<ParamField path="S3_ACCESS_KEY" type="string">
+  AWS S3 access key ID or compatible storage service credentials.
+</ParamField>
+
+<ParamField path="S3_SECRET_KEY" type="string">
+  AWS S3 secret access key or compatible storage service credentials.
+</ParamField>
+
+<ParamField path="S3_REGION" type="string">
+  AWS region for S3 bucket.
+  
+  **Example:** `us-east-1`, `eu-west-1`
+</ParamField>
+
+<ParamField path="S3_BUCKET_NAME" type="string">
+  Name of the S3 bucket for file storage. Required for file uploads in serverless environments.
+</ParamField>
+
+<ParamField path="S3_ENDPOINT_URL" type="string">
+  Custom endpoint URL for S3-compatible storage services (e.g., StorJ, MinIO).
+  
+  Leave empty if using Amazon S3.
+  
+  **Example:** `https://gateway.storjshare.io`
+</ParamField>
+
+<ParamField path="S3_FORCE_PATH_STYLE" type="string" default="0">
+  Force path style for S3-compatible storage.
+  
+  **Options:** `0` (disabled), `1` (enabled)
+</ParamField>
+
+<ParamField path="PUBLIC_URL" type="string">
+  Public domain for all client-facing routes. Falls back to `WEBAPP_URL` if not set.
+  
+  **Example:** `https://survey.example.com`
+</ParamField>
+
+### Feature Toggles
+
+<ParamField path="EMAIL_VERIFICATION_DISABLED" type="string" default="1">
+  Disable email verification for new users.
+  
+  **Note:** Requires SMTP configuration if enabled.
+  
+  **Options:** `0` (enabled), `1` (disabled)
+</ParamField>
+
+<ParamField path="PASSWORD_RESET_DISABLED" type="string" default="1">
+  Disable password reset functionality.
+  
+  **Note:** Requires SMTP configuration if enabled.
+  
+  **Options:** `0` (enabled), `1` (disabled)
+</ParamField>
+
+<ParamField path="EMAIL_AUTH_DISABLED" type="string" default="0">
+  Disable email/password login.
+  
+  **Options:** `0` (enabled), `1` (disabled)
+</ParamField>
+
+<ParamField path="INVITE_DISABLED" type="string" default="0">
+  Disable the ability for invited users to create accounts.
+  
+  **Options:** `0` (enabled), `1` (disabled)
+</ParamField>
+
+### Legal & Compliance
+
+<ParamField path="PRIVACY_URL" type="string">
+  URL to your privacy policy. Displayed in footer of signup and public pages.
+</ParamField>
+
+<ParamField path="TERMS_URL" type="string">
+  URL to your terms of service. Displayed in footer of signup and public pages.
+</ParamField>
+
+<ParamField path="IMPRINT_URL" type="string">
+  URL to your imprint/legal notice. Displayed in footer of signup and public pages.
+</ParamField>
+
+<ParamField path="IMPRINT_ADDRESS" type="string">
+  Physical address for imprint/legal notice.
+</ParamField>
+
+### Security & Bot Protection
+
+<ParamField path="TURNSTILE_SITE_KEY" type="string">
+  Cloudflare Turnstile site key for bot protection in signup flow.
+</ParamField>
+
+<ParamField path="TURNSTILE_SECRET_KEY" type="string">
+  Cloudflare Turnstile secret key for bot protection.
+</ParamField>
+
+<ParamField path="RECAPTCHA_SITE_KEY" type="string">
+  Google reCAPTCHA v3 site key for bot protection.
+</ParamField>
+
+<ParamField path="RECAPTCHA_SECRET_KEY" type="string">
+  Google reCAPTCHA v3 secret key for bot protection.
+</ParamField>
+
+### OAuth Providers
+
+<ParamField path="GITHUB_ID" type="string">
+  GitHub OAuth application client ID.
+</ParamField>
+
+<ParamField path="GITHUB_SECRET" type="string">
+  GitHub OAuth application client secret.
+</ParamField>
+
+<ParamField path="GOOGLE_CLIENT_ID" type="string">
+  Google OAuth application client ID.
+</ParamField>
+
+<ParamField path="GOOGLE_CLIENT_SECRET" type="string">
+  Google OAuth application client secret.
+</ParamField>
+
+<ParamField path="AZUREAD_CLIENT_ID" type="string">
+  Azure Active Directory OAuth application client ID.
+</ParamField>
+
+<ParamField path="AZUREAD_CLIENT_SECRET" type="string">
+  Azure Active Directory OAuth application client secret.
+</ParamField>
+
+<ParamField path="AZUREAD_TENANT_ID" type="string">
+  Azure Active Directory tenant ID.
+</ParamField>
+
+### OpenID Connect (OIDC)
+
+<ParamField path="OIDC_CLIENT_ID" type="string">
+  OIDC client ID.
+</ParamField>
+
+<ParamField path="OIDC_CLIENT_SECRET" type="string">
+  OIDC client secret.
+</ParamField>
+
+<ParamField path="OIDC_ISSUER" type="string">
+  OIDC issuer URL.
+</ParamField>
+
+<ParamField path="OIDC_DISPLAY_NAME" type="string">
+  Display name for OIDC provider in login UI.
+</ParamField>
+
+<ParamField path="OIDC_SIGNING_ALGORITHM" type="string">
+  OIDC token signing algorithm.
+  
+  **Example:** `RS256`
+</ParamField>
+
+### SAML SSO
+
+<ParamField path="SAML_DATABASE_URL" type="string">
+  Separate PostgreSQL database URL for SAML SSO configuration.
+  
+  **Example:** `postgresql://postgres:postgres@localhost:5432/formbricks-saml`
+</ParamField>
+
+### Asset Configuration
+
+<ParamField path="ASSET_PREFIX_URL" type="string">
+  Configure to ship JS & CSS files from a complete URL instead of the current domain.
+</ParamField>
+
+### Integrations
+
+<ParamField path="NOTION_OAUTH_CLIENT_ID" type="string">
+  Notion OAuth client ID for Notion integration.
+</ParamField>
+
+<ParamField path="NOTION_OAUTH_CLIENT_SECRET" type="string">
+  Notion OAuth client secret for Notion integration.
+</ParamField>
+
+<ParamField path="GOOGLE_SHEETS_CLIENT_ID" type="string">
+  Google Sheets OAuth client ID.
+</ParamField>
+
+<ParamField path="GOOGLE_SHEETS_CLIENT_SECRET" type="string">
+  Google Sheets OAuth client secret.
+</ParamField>
+
+<ParamField path="GOOGLE_SHEETS_REDIRECT_URL" type="string">
+  Google Sheets OAuth redirect URL.
+</ParamField>
+
+<ParamField path="AIRTABLE_CLIENT_ID" type="string">
+  Airtable OAuth client ID.
+</ParamField>
+
+<ParamField path="SLACK_CLIENT_ID" type="string">
+  Slack OAuth client ID for Slack integration.
+</ParamField>
+
+<ParamField path="SLACK_CLIENT_SECRET" type="string">
+  Slack OAuth client secret for Slack integration.
+</ParamField>
+
+<ParamField path="UNSPLASH_ACCESS_KEY" type="string">
+  Unsplash API access key for image integration.
+</ParamField>
+
+### Billing (Enterprise)
+
+<ParamField path="STRIPE_SECRET_KEY" type="string">
+  Stripe secret key for payment processing.
+</ParamField>
+
+<ParamField path="STRIPE_WEBHOOK_SECRET" type="string">
+  Stripe webhook secret for verifying webhook signatures.
+</ParamField>
+
+### Enterprise Features
+
+<ParamField path="ENTERPRISE_LICENSE_KEY" type="string">
+  Enterprise license key to unlock enterprise features.
+</ParamField>
+
+<ParamField path="AUTH_SSO_DEFAULT_TEAM_ID" type="string">
+  Automatically assign new SSO users to a specific organization.
+  
+  Insert an existing organization ID or generate a valid CUID at [getuniqueid.com](https://www.getuniqueid.com/cuid).
+</ParamField>
+
+<ParamField path="AUTH_SKIP_INVITE_FOR_SSO" type="string" default="0">
+  Skip invite requirement for SSO users.
+  
+  **Options:** `0` (require invite), `1` (skip invite)
+</ParamField>
+
+<ParamField path="USER_MANAGEMENT_MINIMUM_ROLE" type="string" default="manager">
+  Minimum role required for user management from UI.
+  
+  **Options:** `owner`, `manager`, `disabled`
+</ParamField>
+
+### Marketing & Analytics
+
+<ParamField path="BREVO_API_KEY" type="string">
+  Brevo (formerly Sendinblue) API key for sending new users to Brevo.
+</ParamField>
+
+<ParamField path="BREVO_LIST_ID" type="string">
+  Brevo list ID to add new users to.
+</ParamField>
+
+### Performance & Caching
+
+<ParamField path="REDIS_URL" type="string">
+  Redis connection URL for caching (uses Next.js in-memory cache if not provided).
+  
+  **Example:** `redis://localhost:6379`
+</ParamField>
+
+<ParamField path="REDIS_HTTP_URL" type="string">
+  Redis HTTP URL for rate limiting (uses in-memory LRU cache if not provided).
+  
+  You can use a service like Webdis for this.
+</ParamField>
+
+<ParamField path="RATE_LIMITING_DISABLED" type="string" default="0">
+  Disable rate limiting across the Formbricks app.
+  
+  **Options:** `0` (enabled), `1` (disabled)
+</ParamField>
+
+### Monitoring & Observability
+
+<ParamField path="OTEL_EXPORTER_OTLP_ENDPOINT" type="string">
+  OpenTelemetry OTLP endpoint (base URL, exporters append `/v1/traces` and `/v1/metrics`).
+  
+  **Example:** `http://localhost:4318`
+</ParamField>
+
+<ParamField path="OTEL_EXPORTER_OTLP_PROTOCOL" type="string">
+  OpenTelemetry protocol.
+  
+  **Example:** `http/protobuf`
+</ParamField>
+
+<ParamField path="OTEL_SERVICE_NAME" type="string">
+  Service name for OpenTelemetry.
+  
+  **Example:** `formbricks`
+</ParamField>
+
+<ParamField path="OTEL_RESOURCE_ATTRIBUTES" type="string">
+  Resource attributes for OpenTelemetry.
+  
+  **Example:** `deployment.environment=development`
+</ParamField>
+
+<ParamField path="OTEL_TRACES_SAMPLER" type="string">
+  Trace sampler for OpenTelemetry.
+  
+  **Example:** `parentbased_traceidratio`
+</ParamField>
+
+<ParamField path="OTEL_TRACES_SAMPLER_ARG" type="string">
+  Trace sampler argument for OpenTelemetry.
+  
+  **Example:** `1`
+</ParamField>
+
+<ParamField path="PROMETHEUS_ENABLED" type="string" default="0">
+  Enable Prometheus metrics.
+  
+  **Options:** `0` (disabled), `1` (enabled)
+</ParamField>
+
+<ParamField path="PROMETHEUS_EXPORTER_PORT" type="string">
+  Port for Prometheus metrics exporter.
+</ParamField>
+
+<ParamField path="SENTRY_DSN" type="string">
+  Sentry DSN for error tracking and performance monitoring.
+</ParamField>
+
+<ParamField path="SENTRY_AUTH_TOKEN" type="string">
+  Sentry authentication token. Picked up automatically by Sentry Build Plugin for uploading source maps.
+</ParamField>
+
+<ParamField path="SENTRY_ENVIRONMENT" type="string">
+  Environment label for errors in Sentry dashboard.
+  
+  **Example:** `production`, `staging`
+</ParamField>
+
+### Support & Chat
+
+<ParamField path="CHATWOOT_BASE_URL" type="string" default="https://app.chatwoot.com">
+  Chatwoot base URL for customer support chat.
+</ParamField>
+
+<ParamField path="CHATWOOT_WEBSITE_TOKEN" type="string">
+  Chatwoot website token for customer support integration.
+</ParamField>
+
+### Audit Logging
+
+<ParamField path="AUDIT_LOG_ENABLED" type="string" default="0">
+  Enable audit logging.
+  
+  **Options:** `0` (disabled), `1` (enabled)
+</ParamField>
+
+<ParamField path="AUDIT_LOG_GET_USER_IP" type="string" default="0">
+  Include user IP addresses in audit logs.
+  
+  **Options:** `0` (disabled), `1` (enabled)
+</ParamField>
+
+### Session Configuration
+
+<ParamField path="SESSION_MAX_AGE" type="string" default="86400">
+  Maximum session age in seconds.
+  
+  **Default:** `86400` (24 hours)
+</ParamField>
+
+### Environment Type
+
+<ParamField path="ENVIRONMENT" type="string" default="production">
+  Internal environment identifier.
+  
+  **Options:** `production`, `staging`
+</ParamField>
+
+### Translation
+
+<ParamField path="LINGODOTDEV_API_KEY" type="string">
+  Lingo.dev API key for translation generation.
+</ParamField>
+
+## Environment File Example
+
+You can copy the `.env.example` file from the Formbricks repository as a starting point:
+
+```bash
+cp .env.example .env
+```
+
+Then edit the `.env` file with your specific configuration values.

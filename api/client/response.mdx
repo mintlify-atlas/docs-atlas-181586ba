@@ -1,0 +1,576 @@
+---
+title: Response API
+description: Submit and update survey responses from client applications
+icon: "paper-plane"
+---
+
+The Client Response API allows you to submit survey responses from your application. This is the primary way users interact with your surveys.
+
+## Create a Response
+
+Submit a new survey response.
+
+```
+POST /api/v1/client/{environmentId}/responses
+```
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://app.formbricks.com/api/v1/client/{environmentId}/responses \
+  -H "Content-Type: application/json" \
+  -d '{
+    "surveyId": "srv_...",
+    "finished": true,
+    "data": {
+      "qst_1": "Great product!",
+      "qst_2": 5
+    },
+    "meta": {
+      "source": "app",
+      "url": "https://example.com/dashboard"
+    }
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/client/env_123/responses',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      surveyId: 'srv_...',
+      finished: true,
+      data: {
+        qst_1: 'Great product!',
+        qst_2: 5
+      },
+      meta: {
+        source: 'app',
+        url: window.location.href
+      }
+    })
+  }
+);
+
+const result = await response.json();
+console.log('Response ID:', result.id);
+```
+
+```typescript TypeScript
+interface ResponseData {
+  [questionId: string]: string | number | string[] | Record<string, string>;
+}
+
+interface CreateResponseParams {
+  surveyId: string;
+  finished: boolean;
+  data: ResponseData;
+  userId?: string;
+  displayId?: string;
+  language?: string;
+  variables?: Record<string, string | number>;
+  ttc?: Record<string, number>;
+  meta?: {
+    source?: string;
+    url?: string;
+    action?: string;
+  };
+}
+
+async function submitResponse(params: CreateResponseParams) {
+  const response = await fetch(
+    `https://app.formbricks.com/api/v1/client/env_123/responses`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params)
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error(`Failed to submit response: ${response.status}`);
+  }
+  
+  return response.json();
+}
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="environmentId" type="string" required>
+  Your Formbricks environment ID
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="surveyId" type="string" required>
+  The ID of the survey being responded to
+</ParamField>
+
+<ParamField body="finished" type="boolean" required>
+  Whether this is a complete submission (`true`) or partial (`false`)
+</ParamField>
+
+<ParamField body="data" type="object" required>
+  Response data as question ID to answer mapping
+</ParamField>
+
+<ParamField body="userId" type="string">
+  User identifier for contact tracking (Enterprise only)
+</ParamField>
+
+<ParamField body="displayId" type="string">
+  The display ID if you're tracking survey displays
+</ParamField>
+
+<ParamField body="singleUseId" type="string">
+  Single-use ID for link surveys (prevents duplicate submissions)
+</ParamField>
+
+<ParamField body="language" type="string" default="en">
+  Language code for the response (e.g., "en", "es", "de")
+</ParamField>
+
+<ParamField body="variables" type="object">
+  Additional variables to store with the response (string or number values)
+</ParamField>
+
+<ParamField body="ttc" type="object">
+  Time to complete (in seconds) for each question as `{ questionId: seconds }`
+</ParamField>
+
+<ParamField body="meta" type="object">
+  Metadata about the response
+</ParamField>
+
+<ParamField body="meta.source" type="string">
+  Source of the response (e.g., "app", "website", "email")
+</ParamField>
+
+<ParamField body="meta.url" type="string">
+  URL where the survey was displayed
+</ParamField>
+
+<ParamField body="meta.action" type="string">
+  Action that triggered the survey
+</ParamField>
+
+### Response
+
+```json
+{
+  "id": "res_...",
+  "quotaFull": false
+}
+```
+
+<ResponseField name="id" type="string">
+  The unique identifier for the created response
+</ResponseField>
+
+<ResponseField name="quotaFull" type="boolean">
+  Whether the survey quota has been reached (survey may be paused)
+</ResponseField>
+
+## Update a Response
+
+Update an existing partial response or mark it as finished.
+
+```
+PUT /api/v1/client/{environmentId}/responses/{responseId}
+```
+
+<CodeGroup>
+```bash cURL
+curl -X PUT https://app.formbricks.com/api/v1/client/{environmentId}/responses/{responseId} \
+  -H "Content-Type: application/json" \
+  -d '{
+    "finished": true,
+    "data": {
+      "qst_3": "Additional answer"
+    }
+  }'
+```
+
+```javascript JavaScript
+// Create initial partial response
+const initialResponse = await fetch(
+  'https://app.formbricks.com/api/v1/client/env_123/responses',
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      surveyId: 'srv_456',
+      finished: false,
+      data: { qst_1: 'First answer' }
+    })
+  }
+).then(r => r.json());
+
+// Later, update with more answers
+await fetch(
+  `https://app.formbricks.com/api/v1/client/env_123/responses/${initialResponse.id}`,
+  {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      finished: true,
+      data: {
+        qst_2: 5,
+        qst_3: 'Final answer'
+      }
+    })
+  }
+);
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="environmentId" type="string" required>
+  Your Formbricks environment ID
+</ParamField>
+
+<ParamField path="responseId" type="string" required>
+  The ID of the response to update
+</ParamField>
+
+### Body Parameters
+
+<ParamField body="finished" type="boolean">
+  Mark the response as complete
+</ParamField>
+
+<ParamField body="data" type="object">
+  Additional response data to merge with existing answers
+</ParamField>
+
+<ParamField body="language" type="string">
+  Update the response language
+</ParamField>
+
+<ParamField body="variables" type="object">
+  Additional variables to merge
+</ParamField>
+
+<ParamField body="ttc" type="object">
+  Additional time to complete data
+</ParamField>
+
+### Response
+
+Returns the same format as creating a response.
+
+<Warning>
+  Once a response is marked as `finished: true`, it cannot be updated. Attempts to update a finished response will return a `400 Bad Request` error.
+</Warning>
+
+## Response Data Format
+
+The `data` object contains question IDs as keys and answers as values. The answer format depends on the question type:
+
+### Text Questions
+
+```json
+{
+  "qst_text": "This is my text answer"
+}
+```
+
+### Rating Questions
+
+```json
+{
+  "qst_rating": 5
+}
+```
+
+### Multiple Choice (Single Select)
+
+```json
+{
+  "qst_choice": "option_1"
+}
+```
+
+### Multiple Choice (Multi Select)
+
+```json
+{
+  "qst_multi": ["option_1", "option_2"]
+}
+```
+
+### File Upload
+
+```json
+{
+  "qst_file": "https://storage.formbricks.com/..."
+}
+```
+
+### Matrix Questions
+
+```json
+{
+  "qst_matrix": {
+    "row_1": "column_1",
+    "row_2": "column_2"
+  }
+}
+```
+
+## Partial Responses
+
+For multi-step surveys, submit partial responses as users progress:
+
+```javascript
+// Step 1: Create partial response
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/client/env_123/responses',
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      surveyId: 'srv_456',
+      finished: false, // Partial response
+      data: { qst_1: 'Answer to question 1' },
+      ttc: { qst_1: 10 }
+    })
+  }
+).then(r => r.json());
+
+const responseId = response.id;
+
+// Step 2: Add more answers
+await fetch(
+  `https://app.formbricks.com/api/v1/client/env_123/responses/${responseId}`,
+  {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      data: { qst_2: 'Answer to question 2' },
+      ttc: { qst_2: 15 }
+    })
+  }
+);
+
+// Step 3: Finalize
+await fetch(
+  `https://app.formbricks.com/api/v1/client/env_123/responses/${responseId}`,
+  {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      finished: true,
+      data: { qst_3: 'Final answer' },
+      ttc: { qst_3: 8 }
+    })
+  }
+);
+```
+
+## Validation
+
+The API validates responses against the survey's validation rules:
+
+### Required Fields
+
+When `finished: true`, all required questions must have answers:
+
+```json
+// Error response
+{
+  "message": "Validation failed",
+  "details": {
+    "qst_2": "This field is required"
+  }
+}
+```
+
+### Data Types
+
+Answers must match the question type:
+
+```json
+// Error response
+{
+  "message": "Validation failed",
+  "details": {
+    "qst_rating": "Expected a number"
+  }
+}
+```
+
+### File Uploads
+
+File upload responses are validated against allowed file types and sizes.
+
+## Metadata and Tracking
+
+### User Agent Detection
+
+The API automatically captures user agent information:
+
+- Browser name
+- Operating system
+- Device type (desktop, mobile, tablet)
+
+### Geographic Data
+
+Country is automatically detected from headers:
+
+- CloudFront-Viewer-Country
+- CF-IPCountry (Cloudflare)
+- X-Vercel-IP-Country (Vercel)
+
+### IP Address Capture
+
+If the survey has IP capture enabled, the user's IP address is automatically recorded in the metadata.
+
+## Variables
+
+Use variables to store additional context:
+
+```javascript
+await fetch('https://app.formbricks.com/api/v1/client/env_123/responses', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    surveyId: 'srv_456',
+    finished: true,
+    data: { qst_1: 'answer' },
+    variables: {
+      plan: 'pro',
+      accountAge: 30,
+      referrer: 'google'
+    }
+  })
+});
+```
+
+Variables can be strings or numbers and are stored alongside the response.
+
+## Time to Complete (TTC)
+
+Track how long users spend on each question:
+
+```javascript
+const questionStartTime = Date.now();
+
+// User answers question...
+
+const ttc = Math.floor((Date.now() - questionStartTime) / 1000);
+
+await fetch('https://app.formbricks.com/api/v1/client/env_123/responses', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    surveyId: 'srv_456',
+    finished: true,
+    data: { qst_1: 'answer' },
+    ttc: { qst_1: ttc } // Time in seconds
+  })
+});
+```
+
+## Quota Management
+
+When a survey reaches its response quota:
+
+```json
+{
+  "id": "res_...",
+  "quotaFull": true
+}
+```
+
+Your application should handle this gracefully:
+
+```javascript
+const result = await submitResponse(...);
+
+if (result.quotaFull) {
+  console.log('Survey quota has been reached');
+  // Don't show this survey again
+}
+```
+
+## Enterprise Features
+
+### User Identification
+
+Enterprise customers can track responses by user:
+
+```javascript
+await fetch('https://app.formbricks.com/api/v1/client/env_123/responses', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    surveyId: 'srv_456',
+    userId: 'user_123', // Enterprise only
+    finished: true,
+    data: { qst_1: 'answer' }
+  })
+});
+```
+
+Non-Enterprise plans receive:
+
+```json
+{
+  "message": "User identification is only available for enterprise users."
+}
+```
+
+## Error Responses
+
+### Survey Not Found
+
+```json
+{
+  "message": "Survey not found"
+}
+```
+
+### Wrong Environment
+
+```json
+{
+  "message": "Survey is part of another environment",
+  "details": {
+    "survey.environmentId": "env_456",
+    "environmentId": "env_123"
+  }
+}
+```
+
+### Response Already Finished
+
+```json
+{
+  "message": "Response is already finished"
+}
+```
+
+### Invalid JSON
+
+```json
+{
+  "message": "Invalid JSON in request body"
+}
+```
+
+## Best Practices
+
+1. **Validate Client-Side**: Validate answers before submitting to reduce errors
+2. **Handle Errors**: Always handle API errors gracefully
+3. **Save Response ID**: Store the response ID for updates
+4. **Track Time**: Include TTC data for better insights
+5. **Set Language**: Specify the language for multi-language surveys
+6. **Use Partial Responses**: Submit partial responses for long surveys
+7. **Respect Quota**: Check `quotaFull` and stop showing the survey

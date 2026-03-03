@@ -1,0 +1,320 @@
+---
+title: Environments
+description: Separate development and production data to safely test surveys before going live
+icon: layer-group
+---
+
+Environments are isolated data containers in Formbricks. Each project has exactly **two environments**: **Development** and **Production**. They ensure you can test surveys, integrations, and configurations without affecting real user data.
+
+## What is an Environment?
+
+An **environment** is a complete, isolated instance of your Formbricks setup within a project. Each environment has its own:
+
+- **Surveys**: Different surveys in dev and prod
+- **Contacts**: Separate user bases
+- **Responses**: Isolated response data
+- **Action Classes**: Different triggers and events
+- **Attribute Keys**: Custom attributes schema
+- **Integrations**: Separate webhook endpoints, API keys
+- **API Keys**: Unique credentials per environment
+
+**Key principle:** Data in Development never touches Production, and vice versa.
+
+## The Two Environment Types
+
+Every Formbricks project includes:
+
+### Development Environment
+
+**Purpose:** Test surveys, iterate on questions, and experiment with configurations before going live.
+
+**Use cases:**
+- Build and preview surveys without users seeing them
+- Test survey logic and branching
+- Experiment with integrations (webhooks, Slack, etc.)
+- Train team members without affecting real data
+- Debug SDK implementations
+
+**Characteristics:**
+- Isolated from production users
+- Safe to delete data and start fresh
+- Can generate test responses
+- Not billed for responses (on most plans)
+
+**Example workflow:**
+1. Create survey in Development
+2. Preview and test locally
+3. Share with team for review
+4. Once approved, duplicate to Production
+
+### Production Environment
+
+**Purpose:** Collect real responses from real users.
+
+**Use cases:**
+- Live surveys shown to customers
+- Real response data for analysis
+- Production integrations to your CRM, Slack, etc.
+- User-facing feedback loops
+
+**Characteristics:**
+- Connected to your live app/website
+- Contains real user data
+- Subject to data retention and privacy policies
+- Counted towards response limits (on paid plans)
+
+**Important:** Be cautious when editing live surveys in Production—changes affect real users immediately.
+
+## How Environments Work
+
+### Data Isolation
+
+Environments are completely isolated:
+
+```
+Organization: Acme Inc.
+└─ Project: Product App
+   ├─ Development Environment (ID: env_dev_xyz123)
+   │  ├─ Surveys: 5 draft surveys
+   │  ├─ Contacts: 3 test users
+   │  └─ Responses: 12 test responses
+   │
+   └─ Production Environment (ID: env_prod_abc789)
+      ├─ Surveys: 2 live surveys
+      ├─ Contacts: 1,247 real users
+      └─ Responses: 3,891 real responses
+```
+
+**A contact in Development is not the same as a contact with the same email in Production.** They are separate entities with separate IDs.
+
+### Environment IDs
+
+Each environment has a unique ID (starts with `clx...` or similar cuid).
+
+**Where you'll use Environment IDs:**
+
+**In your app (SDK initialization):**
+```typescript
+import formbricks from "@formbricks/js";
+
+formbricks.init({
+  environmentId: "clx1234567890abcdefg", // Your environment ID
+  apiHost: "https://app.formbricks.com",
+});
+```
+
+**In API requests:**
+```bash
+curl -X GET "https://app.formbricks.com/api/v1/environments/clx1234567890abcdefg/surveys" \
+  -H "x-api-key: your-api-key"
+```
+
+<Warning>
+  **Never hardcode Production environment IDs in your codebase.** Use environment variables to switch between Development and Production dynamically.
+</Warning>
+
+**Best practice:**
+```typescript
+const FORMBRICKS_ENV_ID = process.env.NODE_ENV === "production" 
+  ? process.env.FORMBRICKS_PROD_ENV_ID 
+  : process.env.FORMBRICKS_DEV_ENV_ID;
+
+formbricks.init({
+  environmentId: FORMBRICKS_ENV_ID,
+  apiHost: "https://app.formbricks.com",
+});
+```
+
+## Common Environment Workflows
+
+### Workflow 1: Develop and Test Surveys
+
+<Steps>
+  <Step title="Create Survey in Development">
+    Build your survey in the Development environment. Add questions, configure triggers, and set targeting rules.
+  </Step>
+  <Step title="Test Locally">
+    Initialize the Formbricks SDK with your **Development** environment ID in your local app. Trigger the survey and verify it appears correctly.
+  </Step>
+  <Step title="Review with Team">
+    Share the Development environment link with your team. Collect internal feedback on the survey.
+  </Step>
+  <Step title="Duplicate to Production">
+    Once approved, use the "Duplicate Survey" feature to copy it to Production. This creates an identical survey in the Production environment.
+  </Step>
+  <Step title="Publish in Production">
+    Switch your app to use the **Production** environment ID (via environment variables). Publish the survey and monitor real responses.
+  </Step>
+</Steps>
+
+### Workflow 2: Debugging SDK Integration
+
+<Steps>
+  <Step title="Use Development Environment">
+    Point your local/staging app to the Development environment.
+  </Step>
+  <Step title="Enable Debug Mode">
+    ```typescript
+    formbricks.init({
+      environmentId: "clx_dev_...",
+      apiHost: "https://app.formbricks.com",
+      debug: true, // Shows detailed logs in console
+    });
+    ```
+  </Step>
+  <Step title="Check Formbricks Dashboard">
+    In the Development environment, go to Settings → Setup to see if your SDK is connected and sending data.
+  </Step>
+  <Step title="Verify Actions">
+    Trigger actions in your app and verify they appear in Formbricks Dashboard → Actions.
+  </Step>
+</Steps>
+
+### Workflow 3: A/B Testing Survey Variants
+
+You can create multiple survey variants in Development and test them before choosing one for Production:
+
+1. Create 2-3 survey variants in **Development**
+2. Test each with internal users
+3. Analyze completion rates and response quality
+4. Duplicate the winner to **Production**
+
+## Environment Settings
+
+Each environment has its own configuration:
+
+### API Keys
+
+Generate separate API keys for Development and Production.
+
+- **Development API Key**: Use in local/staging environments
+- **Production API Key**: Use in production, keep secret
+
+**Where to find them:** Settings → API Keys (within each environment)
+
+### Setup Checklist
+
+Formbricks tracks whether your environment is properly configured:
+
+- SDK installed and initialized
+- First action received
+- First contact created
+- First response received
+
+**Status:** Complete the checklist in Development before moving to Production.
+
+### Webhooks & Integrations
+
+Integrations are **per-environment**:
+
+- Development webhooks can point to staging/test endpoints
+- Production webhooks point to live systems
+
+**Example:**
+- Dev environment webhook: `https://staging.yourapp.com/formbricks-webhook`
+- Prod environment webhook: `https://yourapp.com/formbricks-webhook`
+
+## Switching Between Environments
+
+### In the Formbricks Dashboard
+
+Use the **environment switcher** in the top navigation bar:
+
+```
+[Development ▼]  |  Production
+```
+
+Click to toggle between environments. All pages (Surveys, Responses, Contacts, Settings) will reflect the selected environment.
+
+### In Your App (SDK)
+
+Use environment variables to switch:
+
+```typescript
+// .env.development
+FORMBRICKS_ENVIRONMENT_ID=clx_dev_abc123
+
+// .env.production
+FORMBRICKS_ENVIRONMENT_ID=clx_prod_xyz789
+```
+
+```typescript
+formbricks.init({
+  environmentId: process.env.FORMBRICKS_ENVIRONMENT_ID,
+  apiHost: "https://app.formbricks.com",
+});
+```
+
+Your build process (Vite, Next.js, etc.) will automatically use the correct environment ID based on `NODE_ENV`.
+
+### In API Requests
+
+Include the environment ID in the API endpoint:
+
+```bash
+# Development
+curl -X GET "https://app.formbricks.com/api/v1/environments/clx_dev_123/surveys"
+
+# Production  
+curl -X GET "https://app.formbricks.com/api/v1/environments/clx_prod_789/surveys"
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always Test in Development First">
+    Never publish a survey directly to Production without testing in Development. Bugs and issues are inevitable—catch them early.
+  </Accordion>
+  <Accordion title="Use Separate API Keys">
+    Never use Production API keys in your local or staging environments. Rotate keys if accidentally exposed.
+  </Accordion>
+  <Accordion title="Don't Mix Environment IDs">
+    Hardcoding the wrong environment ID is a common mistake. Always use environment variables and verify which environment your app is using.
+  </Accordion>
+  <Accordion title="Keep Production Data Clean">
+    Delete test responses in Production immediately. Use Development for all testing to avoid polluting analytics.
+  </Accordion>
+  <Accordion title="Document Your Setup">
+    Keep a README with your Development and Production environment IDs, API keys location, and setup instructions for new team members.
+  </Accordion>
+  <Accordion title="Review Prod Changes Carefully">
+    Editing a live survey in Production affects users immediately. Double-check changes or duplicate to Dev first to preview.
+  </Accordion>
+</AccordionGroup>
+
+## Common Questions
+
+<AccordionGroup>
+  <Accordion title="Can I create more than 2 environments?">
+    No, each project has exactly 2 environments: Development and Production. If you need more separation, create multiple projects (e.g., "Web App" and "Mobile App").
+  </Accordion>
+  <Accordion title="Can I rename environments?">
+    No, environment types are fixed. However, project names are customizable.
+  </Accordion>
+  <Accordion title="Can I copy data from Production to Development?">
+    Not automatically. You can duplicate surveys, but responses and contacts remain separate. This is intentional to protect user privacy.
+  </Accordion>
+  <Accordion title="What happens if I use the wrong environment ID?">
+    Your app will send data to the wrong environment. Development data will pollute Production (or vice versa). Always use environment variables and verify your setup.
+  </Accordion>
+  <Accordion title="Are environments billed separately?">
+    Typically, only Production responses count towards billing. Check your plan for details.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Surveys" icon="clipboard-question" href="/concepts/surveys">
+    Learn how to create and configure surveys within environments
+  </Card>
+  <Card title="Contacts" icon="users" href="/concepts/contacts">
+    Understand how contacts are tracked per environment
+  </Card>
+  <Card title="API Keys" icon="key" href="/api-reference/authentication">
+    Generate and manage API keys for each environment
+  </Card>
+  <Card title="SDK Setup" icon="code" href="/sdk">
+    Configure the SDK to switch between environments
+  </Card>
+</CardGroup>

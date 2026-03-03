@@ -1,0 +1,414 @@
+---
+title: Enterprise Features
+description: Configure and manage Formbricks Enterprise Edition features for self-hosted deployments
+icon: building
+---
+
+<Note>
+Enterprise features require a valid Enterprise License Key. [Contact sales](https://formbricks.com/contact) to get your license.
+</Note>
+
+Formbricks Enterprise Edition unlocks advanced features for organizations with demanding requirements. This guide covers configuration, activation, and management of enterprise capabilities.
+
+## License Activation
+
+### Obtaining Your License
+
+1. Purchase an enterprise license from the [Formbricks team](https://formbricks.com/contact)
+2. Receive your `ENTERPRISE_LICENSE_KEY` via email
+3. Configure the license key in your deployment
+
+### Configuration
+
+Add your license key to your environment configuration:
+
+<CodeGroup>
+```bash Docker Compose
+# In docker-compose.yml or .env file
+ENTERPRISE_LICENSE_KEY=your_license_key_here
+```
+
+```yaml Kubernetes
+# In your Helm values.yaml
+enterprise:
+  enabled: true
+  licenseKey: "your_license_key_here"
+```
+
+```bash Environment Variable
+export ENTERPRISE_LICENSE_KEY="your_license_key_here"
+```
+</CodeGroup>
+
+### License Validation
+
+Formbricks validates your license with the following behavior:
+
+- **Active Check**: License is validated every 24 hours against the license server
+- **Grace Period**: 3-day grace period if the license server is unreachable
+- **Caching**: License status is cached in Redis to minimize API calls
+- **Offline Mode**: After grace period expiry, enterprise features are disabled
+
+The license validation process runs in `apps/web/modules/ee/license-check/lib/license.ts:620`.
+
+<Tip>
+Monitor license status in your admin panel under **Settings > Billing > License Status**.
+</Tip>
+
+## Enterprise Features Overview
+
+The following features are available with an enterprise license:
+
+### Single Sign-On (SSO)
+
+**Available Providers:**
+- GitHub OAuth
+- Google OAuth
+- Azure Active Directory (Azure AD)
+- OpenID Connect (OIDC)
+- SAML 2.0
+
+**Configuration:**
+
+<CodeGroup>
+```bash GitHub OAuth
+GITHUB_ID=your_github_client_id
+GITHUB_SECRET=your_github_client_secret
+```
+
+```bash Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+```
+
+```bash Azure AD
+AZUREAD_CLIENT_ID=your_azuread_client_id
+AZUREAD_CLIENT_SECRET=your_azuread_client_secret
+AZUREAD_TENANT_ID=your_tenant_id
+```
+
+```bash OpenID Connect
+OIDC_CLIENT_ID=your_oidc_client_id
+OIDC_CLIENT_SECRET=your_oidc_client_secret
+OIDC_ISSUER=https://your-identity-provider.com
+OIDC_DISPLAY_NAME="Your Identity Provider"
+OIDC_SIGNING_ALGORITHM=RS256
+```
+
+```bash SAML
+# Requires separate database for SAML metadata
+SAML_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/formbricks-saml?sslmode=disable
+```
+</CodeGroup>
+
+**SSO Implementation Details:**
+- SSO handlers are located in `apps/web/modules/ee/sso/lib/sso-handlers.ts:46`
+- Supports automatic user provisioning and email matching
+- Team assignment via `AUTH_SSO_DEFAULT_TEAM_ID`
+- Skip invite requirement with `AUTH_SKIP_INVITE_FOR_SSO=1`
+
+### Two-Factor Authentication (2FA)
+
+Enhance account security with TOTP-based 2FA:
+
+- Time-based One-Time Passwords (TOTP)
+- QR code enrollment
+- Backup codes for account recovery
+- Per-user enablement
+
+**User Enrollment:**
+1. Navigate to **Account Settings > Security**
+2. Click **Enable Two-Factor Authentication**
+3. Scan QR code with authenticator app (Google Authenticator, Authy, etc.)
+4. Enter verification code
+5. Save backup codes securely
+
+Implementation in `apps/web/modules/ee/two-factor-auth/lib/two-factor-auth.ts`.
+
+### Whitelabel & Branding
+
+Customize Formbricks to match your brand:
+
+**Remove Branding:**
+- Remove "Powered by Formbricks" footer
+- Hide Formbricks logo from surveys
+- Custom survey attribution
+
+**Email Customization:**
+- Custom logo in email notifications
+- Branded email templates
+- Custom sender name and address
+
+**Favicon Customization:**
+- Upload custom favicon
+- Appears in browser tabs and bookmarks
+
+**Configuration Location:**
+- UI: **Organization Settings > Branding**
+- Code: `apps/web/modules/ee/whitelabel/`
+
+### Advanced Contact Management
+
+**Contact Attributes:**
+- Custom contact attributes
+- Attribute type validation (string, number, date, boolean)
+- Bulk contact import via CSV
+- Contact attribute history
+
+**Segments:**
+- Dynamic audience segmentation
+- Filter contacts by attributes and activities
+- Date-based filtering
+- Complex boolean logic (AND/OR)
+
+**Personal Survey Links:**
+- Generate unique survey links per contact
+- Pre-fill contact attributes
+- Track individual responses
+
+Implementation in `apps/web/modules/ee/contacts/`.
+
+### Multi-Language Surveys
+
+Create surveys in multiple languages:
+
+- Define default language
+- Add secondary languages
+- Localize all survey content (questions, options, thank you messages)
+- Automatic language detection from respondent browser
+- Manual language switcher
+
+**Configuration:**
+1. Navigate to survey editor
+2. Click **Languages** tab
+3. Add target languages
+4. Translate survey content for each language
+
+Code location: `apps/web/modules/ee/multi-language-surveys/`.
+
+### Response Quotas
+
+Control survey response limits:
+
+- Set maximum responses per survey
+- Condition-based quotas (e.g., limit responses from specific segments)
+- Automatic survey closure when quota reached
+- Custom ending cards for quota-limited respondents
+
+Implementation: `apps/web/modules/ee/quotas/`.
+
+### Role-Based Access Control
+
+Granular permission management:
+
+**Roles:**
+- **Owner**: Full access, can delete organization
+- **Manager**: Manage projects and team members
+- **Editor**: Create and edit surveys
+- **Viewer**: Read-only access
+
+**Features:**
+- Custom role assignment per team member
+- Invite members with specific roles
+- Role-based UI restrictions
+- Audit trail for role changes
+
+Code: `apps/web/modules/ee/role-management/`.
+
+### Team Management
+
+Organize users into teams:
+
+- Create multiple teams per organization
+- Assign projects to specific teams
+- Team-level permissions
+- Cross-team collaboration
+
+Implementation: `apps/web/modules/ee/teams/`.
+
+### Audit Logs
+
+Comprehensive activity tracking:
+
+```bash
+# Enable audit logging
+AUDIT_LOG_ENABLED=1
+
+# Include user IP addresses in logs
+AUDIT_LOG_GET_USER_IP=1
+```
+
+**Logged Events:**
+- User authentication (login, logout, failed attempts)
+- Survey creation, modification, deletion
+- Team membership changes
+- Organization settings updates
+- License status changes
+
+**Storage:**
+- Audit logs are stored in Redis
+- Configurable retention period
+- Exportable for compliance requirements
+
+Code: `apps/web/modules/ee/audit-logs/`.
+
+### Spam Protection
+
+Advanced bot detection:
+
+```bash
+# Configure Google reCAPTCHA v3
+RECAPTCHA_SITE_KEY=your_recaptcha_site_key
+RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key
+```
+
+**Features:**
+- Invisible reCAPTCHA v3 for survey responses
+- Configurable score threshold
+- Automatic bot response filtering
+- No impact on user experience
+
+### AI Features
+
+AI-powered capabilities (when enabled):
+
+- Automatic response categorization
+- Sentiment analysis
+- Survey insights generation
+- Smart question suggestions
+
+<Note>
+AI features may require additional API keys and configuration.
+</Note>
+
+## Multi-Organization Support
+
+Enterprise licenses support multiple organizations:
+
+```bash
+# Feature flag (controlled by license)
+isMultiOrgEnabled: true
+```
+
+When enabled:
+- Single installation supports multiple isolated organizations
+- Each organization has separate data, teams, and settings
+- Cross-organization analytics (if permitted)
+- Centralized billing and license management
+
+## Project Limits
+
+Enterprise licenses can customize project limits:
+
+- **Free/Community**: Limited to 3 projects
+- **Enterprise**: Configurable project limits (or unlimited)
+
+```typescript
+// License feature structure
+features: {
+  projects: null, // null = unlimited, or set a number
+  // ... other features
+}
+```
+
+## Feature Availability Matrix
+
+| Feature | Community | Enterprise |
+|---------|-----------|------------|
+| SSO (GitHub, Google, Azure AD, OIDC) | ❌ | ✅ |
+| SAML Authentication | ❌ | ✅ |
+| Two-Factor Authentication | ❌ | ✅ |
+| Whitelabel/Remove Branding | ❌ | ✅ |
+| Custom Email Branding | ❌ | ✅ |
+| Advanced Contacts & Segments | ❌ | ✅ |
+| Multi-Language Surveys | ❌ | ✅ |
+| Response Quotas | ❌ | ✅ |
+| Role-Based Access Control | ❌ | ✅ |
+| Team Management | ❌ | ✅ |
+| Audit Logs | ❌ | ✅ |
+| Spam Protection (reCAPTCHA) | ❌ | ✅ |
+| AI Features | ❌ | ✅ |
+| Multi-Organization | ❌ | ✅ |
+| Unlimited Projects | ❌ | ✅ |
+
+## License Troubleshooting
+
+### License Not Activating
+
+1. **Verify License Key**: Ensure the key is correctly copied without extra spaces
+2. **Check Network**: License server must be reachable at `https://ee.formbricks.com`
+3. **Review Logs**: Check application logs for license validation errors
+4. **Firewall Rules**: Ensure outbound HTTPS to `ee.formbricks.com` is allowed
+
+### Grace Period Expired
+
+If the license server is unreachable for more than 3 days:
+
+1. Enterprise features will be disabled
+2. Restore network connectivity to `ee.formbricks.com`
+3. License will automatically reactivate on next check (within 10 minutes)
+
+### License Errors in Logs
+
+Common error messages:
+
+```bash
+# Invalid license key
+"License API responded with status: 400" 
+# Solution: Verify license key is correct
+
+# License expired
+"status": "expired"
+# Solution: Renew your enterprise license
+
+# Server unreachable
+"License server fetch returned null - server may be unreachable"
+# Solution: Check network connectivity and firewall rules
+```
+
+### Manual License Recheck
+
+Force a license recheck from the admin UI:
+
+1. Navigate to **Settings > Billing > License**
+2. Click **Recheck License**
+3. Wait for validation to complete
+
+## Best Practices
+
+<Check>
+**License Management**
+- Store license key in secure secret management system
+- Monitor license expiration dates
+- Set up alerts for license validation failures
+- Keep license key out of version control
+</Check>
+
+<Check>
+**SSO Configuration**
+- Use SAML for enterprise-grade identity providers
+- Enable 2FA for additional security layer
+- Configure default team assignment for SSO users
+- Test SSO flow in staging before production
+</Check>
+
+<Check>
+**Audit & Compliance**
+- Enable audit logging for compliance requirements
+- Regularly export and archive audit logs
+- Configure user IP logging if required by policy
+- Review access logs periodically
+</Check>
+
+## Support
+
+For enterprise support:
+
+- **Email**: enterprise@formbricks.com
+- **Documentation**: [Enterprise Docs](https://formbricks.com/docs/enterprise)
+- **Priority Support**: Available with enterprise licenses
+- **SLA**: Defined in your enterprise agreement
+
+<Info>
+Enterprise customers receive priority support with guaranteed response times. Check your license agreement for specific SLA details.
+</Info>

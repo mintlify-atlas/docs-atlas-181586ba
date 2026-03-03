@@ -1,0 +1,399 @@
+---
+title: Webhooks
+description: Configure webhooks to receive real-time notifications
+icon: "webhook"
+---
+
+Webhooks allow you to receive real-time HTTP notifications when events occur in Formbricks, such as new survey responses.
+
+## The Webhook Object
+
+### Attributes
+
+<ResponseField name="id" type="string">
+  Unique identifier for the webhook
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of when the webhook was created
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+  ISO 8601 timestamp of when the webhook was last updated
+</ResponseField>
+
+<ResponseField name="environmentId" type="string">
+  The environment this webhook belongs to
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  The URL where webhook events will be sent
+</ResponseField>
+
+<ResponseField name="triggers" type="array">
+  Array of event types that trigger this webhook
+</ResponseField>
+
+<ResponseField name="surveyIds" type="array">
+  Optional array of survey IDs to filter events (empty = all surveys)
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  Optional friendly name for the webhook
+</ResponseField>
+
+<ResponseField name="source" type="string">
+  Source of the webhook (e.g., "user", "zapier")
+</ResponseField>
+
+## List Webhooks
+
+Retrieve all webhooks for your environments.
+
+<CodeGroup>
+```bash cURL
+curl https://app.formbricks.com/api/v1/webhooks \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/webhooks',
+  {
+    headers: {
+      'x-api-key': 'YOUR_API_KEY'
+    }
+  }
+);
+
+const webhooks = await response.json();
+```
+</CodeGroup>
+
+### Response
+
+```json
+[
+  {
+    "id": "wbh_...",
+    "createdAt": "2021-01-01T00:00:00.000Z",
+    "updatedAt": "2021-01-01T00:00:00.000Z",
+    "environmentId": "env_...",
+    "url": "https://your-app.com/webhooks/formbricks",
+    "triggers": ["responseCreated", "responseFinished"],
+    "surveyIds": [],
+    "name": "Production Webhook",
+    "source": "user"
+  }
+]
+```
+
+## Retrieve a Webhook
+
+Get a specific webhook by ID.
+
+<CodeGroup>
+```bash cURL
+curl https://app.formbricks.com/api/v1/webhooks/{webhookId} \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/webhooks/wbh_123',
+  {
+    headers: {
+      'x-api-key': 'YOUR_API_KEY'
+    }
+  }
+);
+
+const webhook = await response.json();
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="webhookId" type="string" required>
+  The ID of the webhook to retrieve
+</ParamField>
+
+## Create a Webhook
+
+Create a new webhook to receive event notifications.
+
+<CodeGroup>
+```bash cURL
+curl -X POST https://app.formbricks.com/api/v1/webhooks \
+  -H "x-api-key: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "environmentId": "env_...",
+    "url": "https://your-app.com/webhooks/formbricks",
+    "triggers": ["responseCreated", "responseFinished"],
+    "name": "Production Webhook"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/webhooks',
+  {
+    method: 'POST',
+    headers: {
+      'x-api-key': 'YOUR_API_KEY',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      environmentId: 'env_...',
+      url: 'https://your-app.com/webhooks/formbricks',
+      triggers: ['responseCreated', 'responseFinished'],
+      name: 'Production Webhook'
+    })
+  }
+);
+
+const webhook = await response.json();
+```
+</CodeGroup>
+
+### Body Parameters
+
+<ParamField body="environmentId" type="string" required>
+  The environment ID for this webhook
+</ParamField>
+
+<ParamField body="url" type="string" required>
+  The URL where webhook events will be sent (must be HTTPS)
+</ParamField>
+
+<ParamField body="triggers" type="array" required>
+  Array of event types: `responseCreated`, `responseUpdated`, `responseFinished`
+</ParamField>
+
+<ParamField body="name" type="string">
+  Friendly name for the webhook
+</ParamField>
+
+<ParamField body="surveyIds" type="array">
+  Optional array of survey IDs to filter events. Empty array means all surveys.
+</ParamField>
+
+<ParamField body="source" type="string">
+  Source identifier (e.g., "user", "zapier", "make")
+</ParamField>
+
+### Response
+
+Returns the created webhook object.
+
+## Delete a Webhook
+
+Delete a webhook to stop receiving notifications.
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE https://app.formbricks.com/api/v1/webhooks/{webhookId} \
+  -H "x-api-key: YOUR_API_KEY"
+```
+
+```javascript JavaScript
+const response = await fetch(
+  'https://app.formbricks.com/api/v1/webhooks/wbh_123',
+  {
+    method: 'DELETE',
+    headers: {
+      'x-api-key': 'YOUR_API_KEY'
+    }
+  }
+);
+```
+</CodeGroup>
+
+### Path Parameters
+
+<ParamField path="webhookId" type="string" required>
+  The ID of the webhook to delete
+</ParamField>
+
+## Webhook Events
+
+### Available Triggers
+
+<ParamField name="responseCreated">
+  Fired when a new response is created (even if partial)
+</ParamField>
+
+<ParamField name="responseUpdated">
+  Fired when an existing response is updated
+</ParamField>
+
+<ParamField name="responseFinished">
+  Fired when a response is marked as finished
+</ParamField>
+
+### Event Payload
+
+When an event occurs, Formbricks sends a POST request to your webhook URL:
+
+```json
+{
+  "event": "responseFinished",
+  "environmentId": "env_...",
+  "surveyId": "srv_...",
+  "response": {
+    "id": "res_...",
+    "createdAt": "2021-01-01T00:00:00.000Z",
+    "updatedAt": "2021-01-01T00:00:00.000Z",
+    "surveyId": "srv_...",
+    "contactId": "con_...",
+    "finished": true,
+    "data": {
+      "qst_1": "Great product!",
+      "qst_2": 5
+    },
+    "variables": {},
+    "ttc": {
+      "qst_1": 12,
+      "qst_2": 3
+    },
+    "meta": {
+      "source": "app",
+      "url": "https://example.com/dashboard",
+      "userAgent": {
+        "browser": "Chrome",
+        "os": "Windows",
+        "device": "desktop"
+      },
+      "country": "US"
+    },
+    "contactAttributes": {
+      "email": "user@example.com"
+    },
+    "language": "en"
+  }
+}
+```
+
+## Webhook Endpoint Requirements
+
+### HTTPS Only
+
+Webhook URLs must use HTTPS (except for localhost during development).
+
+### Response Time
+
+Your endpoint should respond within 5 seconds. Long-running operations should be queued.
+
+### Status Codes
+
+Return a `2xx` status code to acknowledge receipt. Any other status code will be treated as a failure.
+
+### Example Endpoint
+
+<CodeGroup>
+```javascript Node.js (Express)
+app.post('/webhooks/formbricks', express.json(), (req, res) => {
+  const { event, response } = req.body;
+  
+  // Process the webhook asynchronously
+  processWebhook(event, response).catch(err => {
+    console.error('Webhook processing error:', err);
+  });
+  
+  // Respond immediately
+  res.status(200).json({ received: true });
+});
+
+async function processWebhook(event, response) {
+  if (event === 'responseFinished') {
+    // Handle finished response
+    await saveToDatabase(response);
+    await sendNotification(response);
+  }
+}
+```
+
+```python Python (Flask)
+@app.route('/webhooks/formbricks', methods=['POST'])
+def webhook():
+    data = request.json
+    event = data.get('event')
+    response_data = data.get('response')
+    
+    # Process asynchronously
+    process_webhook.delay(event, response_data)
+    
+    # Respond immediately
+    return jsonify({'received': True}), 200
+
+@celery.task
+def process_webhook(event, response_data):
+    if event == 'responseFinished':
+        save_to_database(response_data)
+        send_notification(response_data)
+```
+</CodeGroup>
+
+## Retry Logic
+
+Formbricks implements automatic retries for failed webhook deliveries:
+
+- Retries with exponential backoff
+- Up to 3 retry attempts
+- Webhooks are marked as failed after all retries are exhausted
+
+## Security
+
+### Verify Webhook Source
+
+To verify webhooks are from Formbricks:
+
+1. **IP Allowlist**: Restrict webhook endpoint to Formbricks IP addresses
+2. **Shared Secret**: Include a secret token in the webhook URL query string
+3. **Validate Payload**: Verify the payload structure matches expected format
+
+### Example with Secret Token
+
+```javascript
+// Create webhook with secret in URL
+const webhookUrl = 'https://your-app.com/webhooks/formbricks?token=your_secret_token';
+
+// In your endpoint
+app.post('/webhooks/formbricks', (req, res) => {
+  const token = req.query.token;
+  
+  if (token !== process.env.WEBHOOK_SECRET) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  // Process webhook...
+});
+```
+
+## Testing Webhooks
+
+Use tools like ngrok or webhook.site to test webhooks during development:
+
+```bash
+# Start ngrok tunnel
+ngrok http 3000
+
+# Use the HTTPS URL as your webhook URL
+https://abc123.ngrok.io/webhooks/formbricks
+```
+
+## Filtering by Survey
+
+To receive events only for specific surveys, set the `surveyIds` array:
+
+```json
+{
+  "environmentId": "env_...",
+  "url": "https://your-app.com/webhooks/survey-specific",
+  "triggers": ["responseFinished"],
+  "surveyIds": ["srv_123", "srv_456"]
+}
+```
+
+Leave `surveyIds` empty or omit it to receive events for all surveys.

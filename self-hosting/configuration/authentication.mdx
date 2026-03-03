@@ -1,0 +1,458 @@
+---
+title: Authentication Configuration
+description: Configure authentication methods for your self-hosted Formbricks instance
+icon: lock
+---
+
+## Overview
+
+Formbricks supports multiple authentication methods including email/password, OAuth providers, OpenID Connect (OIDC), and SAML SSO. This guide covers how to configure each authentication method for your self-hosted instance.
+
+## Authentication Methods
+
+Formbricks supports the following authentication methods:
+
+1. **Email/Password** - Default authentication method
+2. **GitHub OAuth** - Sign in with GitHub
+3. **Google OAuth** - Sign in with Google
+4. **Azure AD OAuth** - Sign in with Microsoft Azure
+5. **OpenID Connect (OIDC)** - Generic OIDC provider support
+6. **SAML SSO** - Enterprise SAML single sign-on (requires Enterprise license)
+
+## Email/Password Authentication
+
+Email/password authentication is enabled by default. You can control its behavior with these variables:
+
+<ParamField path="EMAIL_AUTH_DISABLED" type="string" default="0">
+  Disable email/password authentication entirely.
+  
+  **Options:**
+  - `0` - Email auth enabled (default)
+  - `1` - Email auth disabled (only OAuth/SSO available)
+</ParamField>
+
+<ParamField path="EMAIL_VERIFICATION_DISABLED" type="string" default="1">
+  Disable email verification requirement for new signups.
+  
+  **Note:** Requires SMTP configuration if enabled.
+  
+  **Options:**
+  - `0` - Email verification required
+  - `1` - Email verification disabled (default)
+</ParamField>
+
+<ParamField path="PASSWORD_RESET_DISABLED" type="string" default="1">
+  Disable password reset functionality.
+  
+  **Note:** Requires SMTP configuration if enabled.
+  
+  **Options:**
+  - `0` - Password reset enabled
+  - `1` - Password reset disabled (default)
+</ParamField>
+
+## GitHub OAuth
+
+Allow users to sign in with their GitHub accounts.
+
+### Setup Instructions
+
+1. Go to [GitHub Developer Settings](https://github.com/settings/developers)
+2. Click "New OAuth App"
+3. Fill in the application details:
+   - **Application name:** Formbricks
+   - **Homepage URL:** `https://your-formbricks-domain.com`
+   - **Authorization callback URL:** `https://your-formbricks-domain.com/api/auth/callback/github`
+4. Click "Register application"
+5. Generate a new client secret
+6. Add credentials to your `.env` file
+
+### Environment Variables
+
+<ParamField path="GITHUB_ID" type="string">
+  GitHub OAuth application client ID.
+</ParamField>
+
+<ParamField path="GITHUB_SECRET" type="string">
+  GitHub OAuth application client secret.
+</ParamField>
+
+### Example Configuration
+
+```bash
+GITHUB_ID=your_github_client_id
+GITHUB_SECRET=your_github_client_secret
+```
+
+## Google OAuth
+
+Allow users to sign in with their Google accounts.
+
+### Setup Instructions
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select an existing one
+3. Navigate to "APIs & Services" > "Credentials"
+4. Click "Create Credentials" > "OAuth client ID"
+5. Configure OAuth consent screen if prompted
+6. Select "Web application" as application type
+7. Add authorized redirect URI:
+   - `https://your-formbricks-domain.com/api/auth/callback/google`
+8. Copy the client ID and client secret
+
+### Environment Variables
+
+<ParamField path="GOOGLE_CLIENT_ID" type="string">
+  Google OAuth client ID.
+</ParamField>
+
+<ParamField path="GOOGLE_CLIENT_SECRET" type="string">
+  Google OAuth client secret.
+</ParamField>
+
+### Example Configuration
+
+```bash
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+```
+
+## Azure Active Directory OAuth
+
+Allow users to sign in with their Microsoft/Azure AD accounts.
+
+### Setup Instructions
+
+1. Go to [Azure Portal](https://portal.azure.com/)
+2. Navigate to "Azure Active Directory" > "App registrations"
+3. Click "New registration"
+4. Fill in the details:
+   - **Name:** Formbricks
+   - **Supported account types:** Choose appropriate option
+   - **Redirect URI:** Web - `https://your-formbricks-domain.com/api/auth/callback/azure-ad`
+5. Click "Register"
+6. Note the "Application (client) ID" and "Directory (tenant) ID"
+7. Go to "Certificates & secrets" and create a new client secret
+
+### Environment Variables
+
+<ParamField path="AZUREAD_CLIENT_ID" type="string">
+  Azure AD application (client) ID.
+</ParamField>
+
+<ParamField path="AZUREAD_CLIENT_SECRET" type="string">
+  Azure AD client secret value.
+</ParamField>
+
+<ParamField path="AZUREAD_TENANT_ID" type="string">
+  Azure AD directory (tenant) ID.
+</ParamField>
+
+### Example Configuration
+
+```bash
+AZUREAD_CLIENT_ID=your_application_client_id
+AZUREAD_CLIENT_SECRET=your_client_secret_value
+AZUREAD_TENANT_ID=your_directory_tenant_id
+```
+
+## OpenID Connect (OIDC)
+
+Connect to any OIDC-compliant identity provider (Okta, Auth0, Keycloak, etc.).
+
+### Environment Variables
+
+<ParamField path="OIDC_CLIENT_ID" type="string">
+  OIDC client ID from your identity provider.
+</ParamField>
+
+<ParamField path="OIDC_CLIENT_SECRET" type="string">
+  OIDC client secret from your identity provider.
+</ParamField>
+
+<ParamField path="OIDC_ISSUER" type="string">
+  OIDC issuer URL (discovery endpoint base URL).
+  
+  **Examples:**
+  - Okta: `https://your-domain.okta.com`
+  - Auth0: `https://your-tenant.auth0.com`
+  - Keycloak: `https://keycloak.example.com/realms/your-realm`
+</ParamField>
+
+<ParamField path="OIDC_DISPLAY_NAME" type="string">
+  Display name for the OIDC provider in the login UI.
+  
+  **Example:** `Sign in with Okta`
+</ParamField>
+
+<ParamField path="OIDC_SIGNING_ALGORITHM" type="string">
+  Token signing algorithm used by your OIDC provider.
+  
+  **Default:** `RS256`
+  
+  **Common values:** `RS256`, `HS256`
+</ParamField>
+
+### Example Configurations
+
+#### Okta
+
+```bash
+OIDC_CLIENT_ID=your_okta_client_id
+OIDC_CLIENT_SECRET=your_okta_client_secret
+OIDC_ISSUER=https://your-domain.okta.com
+OIDC_DISPLAY_NAME=Sign in with Okta
+OIDC_SIGNING_ALGORITHM=RS256
+```
+
+#### Auth0
+
+```bash
+OIDC_CLIENT_ID=your_auth0_client_id
+OIDC_CLIENT_SECRET=your_auth0_client_secret
+OIDC_ISSUER=https://your-tenant.auth0.com
+OIDC_DISPLAY_NAME=Sign in with Auth0
+OIDC_SIGNING_ALGORITHM=RS256
+```
+
+#### Keycloak
+
+```bash
+OIDC_CLIENT_ID=formbricks
+OIDC_CLIENT_SECRET=your_keycloak_client_secret
+OIDC_ISSUER=https://keycloak.example.com/realms/your-realm
+OIDC_DISPLAY_NAME=Sign in with Keycloak
+OIDC_SIGNING_ALGORITHM=RS256
+```
+
+## SAML SSO
+
+<Callout type="info">
+  **Enterprise Feature**: SAML SSO requires an Enterprise license. Set `ENTERPRISE_LICENSE_KEY` to enable this feature.
+</Callout>
+
+SAML SSO enables enterprise single sign-on with providers like Okta, OneLogin, Azure AD SAML, and more.
+
+### Environment Variables
+
+<ParamField path="SAML_DATABASE_URL" type="string">
+  Separate PostgreSQL database connection string for SAML configuration storage.
+  
+  SAML SSO uses [BoxyHQ Jackson](https://github.com/boxyhq/jackson) which requires a dedicated database.
+  
+  **Example:** `postgresql://postgres:postgres@localhost:5432/formbricks-saml`
+</ParamField>
+
+<ParamField path="ENTERPRISE_LICENSE_KEY" type="string">
+  Enterprise license key to unlock SAML SSO and other enterprise features.
+</ParamField>
+
+### Setup Instructions
+
+1. Create a separate PostgreSQL database for SAML:
+   ```bash
+   createdb formbricks-saml
+   ```
+
+2. Configure environment variables:
+   ```bash
+   ENTERPRISE_LICENSE_KEY=your_enterprise_license_key
+   SAML_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/formbricks-saml
+   ```
+
+3. Restart Formbricks to initialize SAML database
+
+4. Configure your SAML identity provider with:
+   - **ACS URL:** `https://your-formbricks-domain.com/api/auth/saml/callback`
+   - **Entity ID:** `https://saml.formbricks.com`
+   - **Audience:** `https://saml.formbricks.com`
+
+5. Upload your SAML metadata XML to the `./saml-connection` directory or configure via the Formbricks UI
+
+### Pre-loading SAML Connections
+
+You can pre-configure SAML connections by placing metadata XML files in the `./saml-connection` directory before starting Formbricks.
+
+## Session Configuration
+
+<ParamField path="SESSION_MAX_AGE" type="string" default="86400">
+  Maximum session age in seconds.
+  
+  **Default:** `86400` (24 hours)
+  
+  **Example:** `604800` (7 days)
+</ParamField>
+
+## SSO Configuration
+
+### Auto-assign Users to Organization
+
+<ParamField path="AUTH_SSO_DEFAULT_TEAM_ID" type="string">
+  Automatically assign new SSO users to a specific organization.
+  
+  Insert an existing organization ID or generate a valid CUID at [getuniqueid.com](https://www.getuniqueid.com/cuid).
+  
+  **Example:** `cjld2cjxh0000qzrmn831i7rn`
+</ParamField>
+
+<ParamField path="AUTH_SKIP_INVITE_FOR_SSO" type="string" default="0">
+  Skip invite requirement for SSO users.
+  
+  When enabled, SSO users can create accounts without requiring an invitation.
+  
+  **Options:**
+  - `0` - Require invitation (default)
+  - `1` - Skip invitation requirement
+</ParamField>
+
+## Two-Factor Authentication (2FA)
+
+Formbricks supports two-factor authentication via TOTP (Time-based One-Time Password).
+
+2FA is available for:
+- Email/password authentication
+- Can be enabled per-user in account settings
+- Supports authenticator apps (Google Authenticator, Authy, etc.)
+- Includes backup codes for account recovery
+
+No additional configuration is required - 2FA is available out of the box and users can enable it in their account settings.
+
+## Security Considerations
+
+### Encryption Keys
+
+Formbricks uses the `ENCRYPTION_KEY` to encrypt sensitive data including:
+- Two-factor authentication secrets
+- Backup codes
+- OAuth tokens
+
+**Important:** Never change `ENCRYPTION_KEY` after initial setup, as it will make existing encrypted data unreadable.
+
+### Authentication Secrets
+
+```bash
+# Generate secure secrets
+openssl rand -hex 32  # For ENCRYPTION_KEY
+openssl rand -hex 32  # For NEXTAUTH_SECRET
+openssl rand -hex 32  # For CRON_SECRET
+```
+
+### Rate Limiting
+
+Formbricks includes built-in rate limiting for authentication endpoints to prevent brute force attacks:
+
+- Login attempts
+- Password resets
+- Email verification
+- 2FA attempts
+
+Rate limiting can be disabled with:
+
+```bash
+RATE_LIMITING_DISABLED=1
+```
+
+**Warning:** Only disable rate limiting in development environments.
+
+### Audit Logging
+
+Enable audit logging to track authentication events:
+
+```bash
+AUDIT_LOG_ENABLED=1
+AUDIT_LOG_GET_USER_IP=1  # Include IP addresses in logs
+```
+
+## Disabling Features
+
+<ParamField path="INVITE_DISABLED" type="string" default="0">
+  Disable organization invitations.
+  
+  **Options:**
+  - `0` - Invites enabled (default)
+  - `1` - Invites disabled
+</ParamField>
+
+## Complete Authentication Example
+
+Here's an example `.env` configuration with multiple auth providers:
+
+```bash
+# Core Authentication
+ENCRYPTION_KEY=your_generated_encryption_key
+NEXTAUTH_SECRET=your_generated_nextauth_secret
+NEXTAUTH_URL=https://formbricks.example.com
+
+# Email/Password
+EMAIL_AUTH_DISABLED=0
+EMAIL_VERIFICATION_DISABLED=0
+PASSWORD_RESET_DISABLED=0
+
+# GitHub OAuth
+GITHUB_ID=your_github_client_id
+GITHUB_SECRET=your_github_client_secret
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
+# Azure AD
+AZUREAD_CLIENT_ID=your_azure_client_id
+AZUREAD_CLIENT_SECRET=your_azure_client_secret
+AZUREAD_TENANT_ID=your_azure_tenant_id
+
+# OIDC
+OIDC_CLIENT_ID=your_oidc_client_id
+OIDC_CLIENT_SECRET=your_oidc_client_secret
+OIDC_ISSUER=https://your-idp.example.com
+OIDC_DISPLAY_NAME=Sign in with Corporate SSO
+OIDC_SIGNING_ALGORITHM=RS256
+
+# Enterprise SAML SSO
+ENTERPRISE_LICENSE_KEY=your_enterprise_license_key
+SAML_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/formbricks-saml
+
+# SSO Configuration
+AUTH_SSO_DEFAULT_TEAM_ID=cjld2cjxh0000qzrmn831i7rn
+AUTH_SKIP_INVITE_FOR_SSO=1
+
+# Session
+SESSION_MAX_AGE=86400
+
+# Security
+AUDIT_LOG_ENABLED=1
+AUDIT_LOG_GET_USER_IP=1
+RATE_LIMITING_DISABLED=0
+```
+
+## Troubleshooting
+
+### OAuth Redirect URI Mismatch
+
+- Ensure the redirect URI in your OAuth provider matches exactly: `https://your-domain.com/api/auth/callback/{provider}`
+- Check for trailing slashes - they must match
+- Verify protocol (http vs https)
+
+### OIDC Discovery Issues
+
+- Ensure `OIDC_ISSUER` is correct and accessible
+- Check that `/.well-known/openid-configuration` endpoint is reachable
+- Verify network/firewall rules allow outbound HTTPS
+
+### SAML Configuration
+
+- Verify `SAML_DATABASE_URL` points to a valid PostgreSQL database
+- Check that SAML metadata XML is valid
+- Ensure ACS URL and Entity ID match between Formbricks and your IdP
+
+### Session Issues
+
+- Verify `NEXTAUTH_SECRET` is set and consistent across restarts
+- Check that `NEXTAUTH_URL` matches your actual domain
+- For custom base paths, include the full path in `NEXTAUTH_URL`
+
+## Next Steps
+
+- [Email Configuration](/self-hosting/configuration/email) - Configure SMTP for password resets and verification
+- [Storage Configuration](/self-hosting/configuration/storage) - Set up file storage
+- [Environment Variables Reference](/self-hosting/configuration/environment-variables) - Complete list of all variables

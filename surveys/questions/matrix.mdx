@@ -1,0 +1,340 @@
+---
+title: Matrix
+description: Collect ratings across multiple items using a grid format
+---
+
+The Matrix question type allows respondents to rate multiple items (rows) using the same set of options (columns) in a grid format. It's efficient for collecting consistent ratings across related questions.
+
+## Configuration
+
+### Basic Properties
+
+```typescript
+type TSurveyMatrixElement = {
+  id: string;                    // Unique identifier
+  type: "matrix";                // Question type
+  headline: TI18nString;         // Main question text (required)
+  subheader?: TI18nString;       // Optional descriptive text
+  required: boolean;             // Whether response is mandatory
+  rows: TSurveyMatrixElementChoice[]; // Items to rate (rows)
+  columns: TSurveyMatrixElementChoice[]; // Rating options (columns)
+  shuffleOption?: "none" | "all" | "exceptLast"; // Randomize rows
+  validation?: TValidation;      // Advanced validation rules
+  imageUrl?: string;             // Optional image URL
+  videoUrl?: string;             // Optional video URL
+  isDraft?: boolean;             // Mark as draft
+};
+
+type TSurveyMatrixElementChoice = {
+  id: string;                    // Unique identifier
+  label: TI18nString;           // Display text
+};
+```
+
+### Rows and Columns
+
+**Rows** represent the items being rated:
+```typescript
+rows: [
+  { id: "feature_a", label: { default: "Feature A" } },
+  { id: "feature_b", label: { default: "Feature B" } },
+  { id: "feature_c", label: { default: "Feature C" } }
+]
+```
+
+**Columns** represent the rating scale:
+```typescript
+columns: [
+  { id: "poor", label: { default: "Poor" } },
+  { id: "fair", label: { default: "Fair" } },
+  { id: "good", label: { default: "Good" } },
+  { id: "excellent", label: { default: "Excellent" } }
+]
+```
+
+**Requirements:**
+- Row labels must be unique within the same language
+- Column labels must be unique within the same language
+- At least 2 rows and 2 columns required
+
+### Shuffle Options
+
+Randomize row order to reduce bias:
+
+- **none** (default): Display rows in defined order
+- **all**: Randomize all rows
+- **exceptLast**: Randomize all except the last row
+
+### Validation Rules
+
+Matrix questions support validation to ensure response completeness:
+
+```typescript
+validation: {
+  logic: "and" | "or",
+  rules: [
+    {
+      id: "min_rows",
+      type: "minRowsAnswered",
+      params: { min: 2 }          // At least N rows must be answered
+    },
+    {
+      id: "all_rows",
+      type: "answerAllRows",
+      params: {}                  // All rows must be answered
+    }
+  ]
+}
+```
+
+**Available validation types:**
+- `minRowsAnswered`: Require minimum number of rows to be answered
+- `answerAllRows`: Require all rows to be answered
+
+## Use Cases
+
+### Feature Satisfaction Matrix
+
+Rate multiple features:
+
+```typescript
+{
+  id: "feature_satisfaction",
+  type: "matrix",
+  headline: { default: "How satisfied are you with the following features?" },
+  required: true,
+  rows: [
+    { id: "dashboard", label: { default: "Dashboard" } },
+    { id: "reporting", label: { default: "Reporting" } },
+    { id: "integrations", label: { default: "Integrations" } },
+    { id: "support", label: { default: "Customer Support" } },
+    { id: "documentation", label: { default: "Documentation" } }
+  ],
+  columns: [
+    { id: "very_dissatisfied", label: { default: "Very Dissatisfied" } },
+    { id: "dissatisfied", label: { default: "Dissatisfied" } },
+    { id: "neutral", label: { default: "Neutral" } },
+    { id: "satisfied", label: { default: "Satisfied" } },
+    { id: "very_satisfied", label: { default: "Very Satisfied" } }
+  ],
+  validation: {
+    logic: "and",
+    rules: [
+      { id: "all", type: "answerAllRows", params: {} }
+    ]
+  }
+}
+```
+
+### Agreement Scale Matrix
+
+Measure agreement with statements:
+
+```typescript
+{
+  id: "product_statements",
+  type: "matrix",
+  headline: { default: "Please indicate your level of agreement with each statement" },
+  required: true,
+  rows: [
+    { id: "easy_to_use", label: { default: "The product is easy to use" } },
+    { id: "good_value", label: { default: "The product provides good value" } },
+    { id: "would_recommend", label: { default: "I would recommend this to others" } },
+    { id: "meets_needs", label: { default: "It meets my needs" } }
+  ],
+  columns: [
+    { id: "strongly_disagree", label: { default: "Strongly Disagree" } },
+    { id: "disagree", label: { default: "Disagree" } },
+    { id: "neutral", label: { default: "Neutral" } },
+    { id: "agree", label: { default: "Agree" } },
+    { id: "strongly_agree", label: { default: "Strongly Agree" } }
+  ]
+}
+```
+
+### Frequency Matrix
+
+Measure usage frequency:
+
+```typescript
+{
+  id: "feature_usage",
+  type: "matrix",
+  headline: { default: "How often do you use these features?" },
+  required: false,
+  rows: [
+    { id: "analytics", label: { default: "Analytics" } },
+    { id: "exports", label: { default: "Data Exports" } },
+    { id: "api", label: { default: "API" } },
+    { id: "automation", label: { default: "Automation" } }
+  ],
+  columns: [
+    { id: "never", label: { default: "Never" } },
+    { id: "rarely", label: { default: "Rarely" } },
+    { id: "sometimes", label: { default: "Sometimes" } },
+    { id: "often", label: { default: "Often" } },
+    { id: "daily", label: { default: "Daily" } }
+  ]
+}
+```
+
+### Importance vs Performance
+
+Dual matrix for gap analysis:
+
+```typescript
+// Importance matrix
+{
+  id: "importance",
+  type: "matrix",
+  headline: { default: "How important are these aspects to you?" },
+  required: true,
+  rows: [
+    { id: "speed", label: { default: "Speed" } },
+    { id: "reliability", label: { default: "Reliability" } },
+    { id: "features", label: { default: "Feature Set" } },
+    { id: "price", label: { default: "Pricing" } }
+  ],
+  columns: [
+    { id: "not_important", label: { default: "Not Important" } },
+    { id: "somewhat", label: { default: "Somewhat Important" } },
+    { id: "important", label: { default: "Important" } },
+    { id: "very", label: { default: "Very Important" } }
+  ]
+},
+// Performance matrix (same rows, different columns)
+{
+  id: "performance",
+  type: "matrix",
+  headline: { default: "How well do we perform on these aspects?" },
+  required: true,
+  rows: [
+    { id: "speed", label: { default: "Speed" } },
+    { id: "reliability", label: { default: "Reliability" } },
+    { id: "features", label: { default: "Feature Set" } },
+    { id: "price", label: { default: "Pricing" } }
+  ],
+  columns: [
+    { id: "poor", label: { default: "Poor" } },
+    { id: "fair", label: { default: "Fair" } },
+    { id: "good", label: { default: "Good" } },
+    { id: "excellent", label: { default: "Excellent" } }
+  ]
+}
+```
+
+### Partial Answers Allowed
+
+Require only some rows to be answered:
+
+```typescript
+{
+  id: "optional_ratings",
+  type: "matrix",
+  headline: { default: "Rate the features you've used" },
+  subheader: { default: "You can skip features you haven't tried" },
+  required: false,
+  rows: [
+    { id: "feature1", label: { default: "Feature 1" } },
+    { id: "feature2", label: { default: "Feature 2" } },
+    { id: "feature3", label: { default: "Feature 3" } },
+    { id: "feature4", label: { default: "Feature 4" } },
+    { id: "feature5", label: { default: "Feature 5" } }
+  ],
+  columns: [
+    { id: "1", label: { default: "1" } },
+    { id: "2", label: { default: "2" } },
+    { id: "3", label: { default: "3" } },
+    { id: "4", label: { default: "4" } },
+    { id: "5", label: { default: "5" } }
+  ],
+  validation: {
+    logic: "and",
+    rules: [
+      {
+        id: "at_least_three",
+        type: "minRowsAnswered",
+        params: { min: 3 }
+      }
+    ]
+  }
+}
+```
+
+## Best Practices
+
+1. **Keep matrices focused**: 3-7 rows is ideal; more than 10 becomes overwhelming
+2. **Use consistent scales**: All rows should use the same column scale
+3. **Keep column labels short**: They repeat for every row
+4. **Consider mobile**: Large matrices can be difficult on small screens
+5. **Use validation wisely**: `answerAllRows` ensures complete data but adds friction
+6. **Randomize when appropriate**: Use shuffle to reduce order bias
+7. **Group related items**: All rows should be thematically related
+8. **Label clearly**: Make it obvious what respondents are rating
+
+## When to Use Matrix
+
+**Good use cases:**
+- Rating multiple features/products with same scale
+- Measuring agreement with multiple statements
+- Frequency of use for related items
+- Satisfaction with various service aspects
+- Importance ratings for features
+
+**Avoid matrix when:**
+- Items need different scales
+- You only have 1-2 items (use Rating instead)
+- Questions are unrelated
+- Mobile is primary platform and matrix is large
+
+## Validation Examples
+
+### Require All Rows
+
+```typescript
+validation: {
+  logic: "and",
+  rules: [
+    { id: "complete", type: "answerAllRows", params: {} }
+  ]
+}
+```
+
+### Require Minimum Rows
+
+```typescript
+validation: {
+  logic: "and",
+  rules: [
+    { id: "min", type: "minRowsAnswered", params: { min: 3 } }
+  ]
+}
+```
+
+## Response Data Format
+
+Matrix responses are stored as an object mapping row IDs to column IDs:
+
+```json
+{
+  "matrix_question_id": {
+    "row_1_id": "column_2_id",
+    "row_2_id": "column_4_id",
+    "row_3_id": "column_1_id"
+  }
+}
+```
+
+## Accessibility
+
+- Keyboard navigation with Tab and Arrow keys
+- Screen readers announce row and column labels
+- Radio buttons provide clear single-selection per row
+- Required rows are indicated to assistive technologies
+- Validation errors are announced
+
+## Related Question Types
+
+- [Rating](/surveys/questions/rating) - For rating a single item
+- [Single Select](/surveys/questions/single-select) - For single choice questions
+- [Multi Select](/surveys/questions/multi-select) - For multiple selections per item

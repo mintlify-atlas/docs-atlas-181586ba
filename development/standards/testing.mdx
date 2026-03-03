@@ -1,0 +1,684 @@
+---
+title: Testing Standards
+description: Testing guidelines and best practices for Formbricks
+icon: flask
+---
+
+This guide outlines our testing standards and best practices for maintaining high-quality code.
+
+## Testing Philosophy
+
+<CardGroup cols={2}>
+  <Card title="Test What Matters" icon="target">
+    Focus on business logic and user flows
+  </Card>
+  <Card title="Fast Feedback" icon="bolt">
+    Tests should run quickly
+  </Card>
+  <Card title="Reliable" icon="shield-check">
+    No flaky tests
+  </Card>
+  <Card title="Maintainable" icon="wrench">
+    Easy to update as code evolves
+  </Card>
+</CardGroup>
+
+## Testing Strategy
+
+Formbricks uses a multi-layered testing approach:
+
+### Unit Tests (Vitest)
+
+Test individual functions and utilities in `.ts` files.
+
+**Use for:**
+- Business logic
+- Utility functions
+- Data transformations
+- Service layer methods
+
+**Do not test:**
+- `.tsx` files (React components)
+- Simple getters/setters
+- External library code
+
+### E2E Tests (Playwright)
+
+Test complete user workflows through the browser.
+
+**Use for:**
+- Critical user journeys
+- React component interactions
+- Full-stack flows
+- Cross-browser compatibility
+
+### Integration Tests
+
+Test interactions between multiple modules.
+
+**Use for:**
+- API endpoint testing
+- Database operations
+- Service integrations
+
+## Unit Testing with Vitest
+
+### Setup
+
+Vitest is configured at the workspace and package levels:
+
+```bash
+# Run all unit tests
+pnpm test
+
+# Run with coverage
+pnpm test:coverage
+
+# Run in watch mode (during development)
+pnpm test --watch
+
+# Run specific test file
+pnpm test path/to/test.test.ts
+```
+
+### Test File Structure
+
+Place tests next to the code they test:
+
+```
+lib/
+  survey/
+    service.ts
+    service.test.ts    # Test file
+    utils.ts
+    utils.test.ts      # Test file
+```
+
+### Writing Tests
+
+<CodeGroup>
+```typescript Basic Test
+import { describe, it, expect } from "vitest";
+import { calculateScore } from "./utils";
+
+describe("calculateScore", () => {
+  it("should calculate total score from responses", () => {
+    const responses = [
+      { score: 5 },
+      { score: 3 },
+      { score: 7 },
+    ];
+    
+    const result = calculateScore(responses);
+    
+    expect(result).toBe(15);
+  });
+  
+  it("should return 0 for empty responses", () => {
+    const result = calculateScore([]);
+    expect(result).toBe(0);
+  });
+});
+```
+
+```typescript With Mocks
+import { describe, it, expect, vi } from "vitest";
+import { createSurvey } from "./service";
+import { prisma } from "@formbricks/database";
+
+vi.mock("@formbricks/database", () => ({
+  prisma: {
+    survey: {
+      create: vi.fn(),
+    },
+  },
+}));
+
+describe("createSurvey", () => {
+  it("should create a survey with valid data", async () => {
+    const mockSurvey = {
+      id: "survey-1",
+      name: "Test Survey",
+    };
+    
+    vi.mocked(prisma.survey.create).mockResolvedValue(mockSurvey);
+    
+    const result = await createSurvey({ name: "Test Survey" });
+    
+    expect(result).toEqual(mockSurvey);
+    expect(prisma.survey.create).toHaveBeenCalledWith({
+      data: { name: "Test Survey" },
+    });
+  });
+});
+```
+</CodeGroup>
+
+### Test Organization
+
+Follow the Arrange-Act-Assert pattern:
+
+```typescript
+it("should filter active surveys", () => {
+  // Arrange - Set up test data
+  const surveys = [
+    { id: "1", status: "active" },
+    { id: "2", status: "draft" },
+    { id: "3", status: "active" },
+  ];
+  
+  // Act - Execute the function
+  const result = filterActiveSurveys(surveys);
+  
+  // Assert - Verify the result
+  expect(result).toHaveLength(2);
+  expect(result[0].id).toBe("1");
+  expect(result[1].id).toBe("3");
+});
+```
+
+### Mocking
+
+#### Mock Modules
+
+```typescript
+import { vi } from "vitest";
+
+vi.mock("@formbricks/database", () => ({
+  prisma: {
+    survey: {
+      findMany: vi.fn(),
+      create: vi.fn(),
+    },
+  },
+}));
+```
+
+#### Mock Functions
+
+```typescript
+import { vi } from "vitest";
+
+const mockCallback = vi.fn();
+mockCallback.mockReturnValue(42);
+mockCallback.mockResolvedValue({ data: "test" });
+```
+
+#### Mock Implementation
+
+```typescript
+vi.mocked(prisma.survey.create).mockImplementation(async (data) => {
+  return {
+    id: "generated-id",
+    ...data,
+  };
+});
+```
+
+### Testing Async Code
+
+```typescript
+import { describe, it, expect } from "vitest";
+
+describe("async function", () => {
+  it("should fetch survey data", async () => {
+    const survey = await getSurvey("survey-1");
+    expect(survey).toBeDefined();
+    expect(survey.id).toBe("survey-1");
+  });
+  
+  it("should reject with error for invalid ID", async () => {
+    await expect(getSurvey("invalid")).rejects.toThrow("Survey not found");
+  });
+});
+```
+
+### Testing with Testing Library
+
+For utilities that manipulate React elements:
+
+```typescript
+import { render, screen } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
+
+describe("Component utility", () => {
+  it("should transform component props", () => {
+    const transformed = transformProps({ name: "Test" });
+    expect(transformed).toHaveProperty("displayName", "Test");
+  });
+});
+```
+
+## E2E Testing with Playwright
+
+### Setup
+
+Playwright tests are located in `apps/web/playwright/`:
+
+```bash
+# Run E2E tests
+pnpm test:e2e
+
+# Run in UI mode (for debugging)
+px playwright test --ui
+
+# Run specific test
+px playwright test billing.spec.ts
+```
+
+### Test File Structure
+
+```
+apps/web/playwright/
+  auth/
+    login.spec.ts
+    signup.spec.ts
+  survey/
+    create-survey.spec.ts
+    edit-survey.spec.ts
+  billing.spec.ts
+```
+
+### Writing E2E Tests
+
+```typescript
+import { test, expect } from "@playwright/test";
+
+test.describe("Survey Creation", () => {
+  test.beforeEach(async ({ page }) => {
+    // Login before each test
+    await page.goto("/auth/login");
+    await page.fill('[name="email"]', "test@example.com");
+    await page.fill('[name="password"]', "password");
+    await page.click('button[type="submit"]');
+    await page.waitForURL("/");
+  });
+  
+  test("should create a new survey", async ({ page }) => {
+    // Navigate to surveys
+    await page.goto("/surveys");
+    
+    // Click create button
+    await page.click('text="Create Survey"');
+    
+    // Fill form
+    await page.fill('[name="name"]', "My Test Survey");
+    await page.fill('[name="description"]', "Test description");
+    
+    // Submit
+    await page.click('button[type="submit"]');
+    
+    // Verify creation
+    await expect(page.locator('text="Survey created"')).toBeVisible();
+    await expect(page.locator('text="My Test Survey"')).toBeVisible();
+  });
+});
+```
+
+### Playwright Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use data-testid for stable selectors">
+    ```typescript
+    // In component
+    <button data-testid="create-survey-btn">Create</button>
+    
+    // In test
+    await page.click('[data-testid="create-survey-btn"]');
+    ```
+  </Accordion>
+  
+  <Accordion title="Wait for navigation">
+    ```typescript
+    await page.click('text="Submit"');
+    await page.waitForURL("/success");
+    ```
+  </Accordion>
+  
+  <Accordion title="Use page object pattern">
+    ```typescript
+    class SurveyPage {
+      constructor(private page: Page) {}
+      
+      async createSurvey(name: string) {
+        await this.page.click('[data-testid="create-btn"]');
+        await this.page.fill('[name="name"]', name);
+        await this.page.click('[type="submit"]');
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Tag slow tests">
+    ```typescript
+    test("complex workflow @slow", async ({ page }) => {
+      // Long-running test
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Descriptive Test Names
+
+Use descriptive filenames:
+
+- `billing.spec.ts` - Billing tests
+- `survey-creation.spec.ts` - Survey creation flow
+- `user-settings.spec.ts` - User settings
+
+## Code Coverage
+
+### Running Coverage
+
+```bash
+pnpm test:coverage
+```
+
+### Coverage Goals
+
+- **Minimum**: 70% overall coverage
+- **Critical paths**: 90%+ coverage
+- **New features**: Must include tests
+
+### Viewing Coverage
+
+Coverage reports are generated in `coverage/` directory:
+
+```bash
+# Open HTML report
+open coverage/index.html
+```
+
+### What to Cover
+
+<CardGroup cols={2}>
+  <Card title="Cover" icon="check">
+    - Business logic
+    - Data transformations
+    - Validation functions
+    - Service methods
+    - Error handling
+    - Edge cases
+  </Card>
+  <Card title="Don't Cover" icon="xmark">
+    - Simple getters/setters
+    - Type definitions
+    - External libraries
+    - Generated code
+    - Configuration files
+  </Card>
+</CardGroup>
+
+## Testing Patterns
+
+### Test Data Builders
+
+Create reusable test data builders:
+
+```typescript
+class SurveyBuilder {
+  private data: Partial<Survey> = {};
+  
+  withName(name: string) {
+    this.data.name = name;
+    return this;
+  }
+  
+  withStatus(status: SurveyStatus) {
+    this.data.status = status;
+    return this;
+  }
+  
+  build(): Survey {
+    return {
+      id: "survey-1",
+      name: "Test Survey",
+      status: "draft",
+      ...this.data,
+    };
+  }
+}
+
+// Usage
+const survey = new SurveyBuilder()
+  .withName("Custom Survey")
+  .withStatus("active")
+  .build();
+```
+
+### Test Fixtures
+
+Use fixtures for common test data:
+
+```typescript
+// fixtures/survey.ts
+export const mockSurvey = {
+  id: "survey-1",
+  name: "Test Survey",
+  status: "active",
+};
+
+export const mockResponses = [
+  { id: "r1", surveyId: "survey-1", score: 5 },
+  { id: "r2", surveyId: "survey-1", score: 3 },
+];
+
+// In test
+import { mockSurvey } from "./fixtures/survey";
+```
+
+### Parameterized Tests
+
+Test multiple scenarios:
+
+```typescript
+import { describe, it, expect } from "vitest";
+
+describe("validateEmail", () => {
+  const validEmails = [
+    "test@example.com",
+    "user+tag@domain.co.uk",
+    "name.surname@company.com",
+  ];
+  
+  validEmails.forEach((email) => {
+    it(`should accept valid email: ${email}`, () => {
+      expect(validateEmail(email)).toBe(true);
+    });
+  });
+  
+  const invalidEmails = [
+    "notanemail",
+    "@example.com",
+    "user@",
+  ];
+  
+  invalidEmails.forEach((email) => {
+    it(`should reject invalid email: ${email}`, () => {
+      expect(validateEmail(email)).toBe(false);
+    });
+  });
+});
+```
+
+## Mocking Strategies
+
+### Database Mocks
+
+Place mocks in `__mocks__` directory:
+
+```typescript
+// __mocks__/@formbricks/database.ts
+export const prisma = {
+  survey: {
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+};
+```
+
+### Network Mocks
+
+```typescript
+import { vi } from "vitest";
+
+global.fetch = vi.fn();
+
+vi.mocked(fetch).mockResolvedValue({
+  ok: true,
+  json: async () => ({ data: "test" }),
+} as Response);
+```
+
+### Environment Variables
+
+```typescript
+import { vi } from "vitest";
+
+vi.stubEnv("DATABASE_URL", "postgresql://test");
+vi.stubEnv("NEXTAUTH_SECRET", "test-secret");
+```
+
+## Best Practices
+
+### Do's
+
+- Write tests before fixing bugs (TDD for bug fixes)
+- Test edge cases and error scenarios
+- Keep tests independent and isolated
+- Use descriptive test names
+- Mock external dependencies
+- Clean up after tests (afterEach, afterAll)
+
+### Don'ts
+
+- Don't test implementation details
+- Don't write flaky tests
+- Don't skip tests (fix or remove them)
+- Don't test external libraries
+- Don't use timeouts as assertions
+- Don't commit failing tests
+
+### Test Naming
+
+Use descriptive names that explain what's being tested:
+
+<CodeGroup>
+```typescript Good
+it("should create survey with valid data")
+it("should throw error when name is missing")
+it("should filter surveys by status")
+```
+
+```typescript Bad
+it("test 1")
+it("works")
+it("creates survey")
+```
+</CodeGroup>
+
+### Keep Tests Fast
+
+- Mock external services (don't make real API calls)
+- Use in-memory databases when possible
+- Minimize setup/teardown
+- Run tests in parallel
+
+## Continuous Integration
+
+Tests run automatically on every PR:
+
+```yaml
+# GitHub Actions runs:
+- pnpm lint
+- pnpm test
+- pnpm build
+- pnpm test:e2e (on main branch)
+```
+
+**Requirements:**
+- All tests must pass
+- Coverage must not decrease
+- No ESLint errors
+
+## Debugging Tests
+
+### Vitest Debugging
+
+```bash
+# Run single test file
+pnpm test path/to/test.test.ts
+
+# Run tests matching pattern
+pnpm test --grep "survey creation"
+
+# Debug with VS Code
+# Add breakpoint and use "Debug" in VS Code
+```
+
+### Playwright Debugging
+
+```bash
+# Run in UI mode
+px playwright test --ui
+
+# Run in headed mode
+px playwright test --headed
+
+# Run with debugger
+px playwright test --debug
+
+# Generate test
+px playwright codegen
+```
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="Test timeout">
+    Increase timeout for slow tests:
+    
+    ```typescript
+    it("slow test", async () => {
+      // ...
+    }, 10000); // 10 second timeout
+    ```
+  </Accordion>
+  
+  <Accordion title="Module not mocked">
+    Ensure mock is placed before imports:
+    
+    ```typescript
+    vi.mock("module", () => ({ ... }));
+    import { fn } from "module"; // After mock
+    ```
+  </Accordion>
+  
+  <Accordion title="Async not awaited">
+    Always await async operations:
+    
+    ```typescript
+    await expect(asyncFn()).resolves.toBe(value);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Resources
+
+<CardGroup cols={2}>
+  <Card title="Vitest Docs" icon="flask" href="https://vitest.dev">
+    Official Vitest documentation
+  </Card>
+  <Card title="Playwright Docs" icon="browser" href="https://playwright.dev">
+    Official Playwright documentation
+  </Card>
+  <Card title="Testing Library" icon="book" href="https://testing-library.com">
+    Testing Library documentation
+  </Card>
+  <Card title="Code Style" icon="code" href="/development/standards/code-style">
+    Code style guidelines
+  </Card>
+</CardGroup>

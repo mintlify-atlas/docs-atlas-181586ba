@@ -1,0 +1,520 @@
+---
+title: Responses
+description: Collect, filter, analyze, and export survey responses with rich metadata
+icon: message
+---
+
+Responses are the core data collected by Formbricks. A **response** represents a user's answers to a survey, along with metadata about when, where, and how they responded.
+
+## What is a Response?
+
+A **response** is created when a user interacts with a survey. It contains:
+
+- **Answer Data**: The actual responses to each question
+- **Metadata**: Browser, device, location, referrer, etc.
+- **Contact**: The user who responded (if identified)
+- **Status**: Completed or partial (abandoned)
+- **Timestamps**: When started, updated, and finished
+- **Tags**: Labels for organization and filtering
+- **Variables**: Custom data passed from your app
+- **Hidden Fields**: Additional context (UTM params, experiment variants, etc.)
+
+Responses are stored in an [environment](/concepts/environments) and linked to a [survey](/concepts/surveys) and optionally a [contact](/concepts/contacts).
+
+## Response Lifecycle
+
+<Steps>
+  <Step title="Response Created">
+    When a user opens a survey, a response record is created with status `finished: false`. This happens even if they don't answer any questions yet.
+  </Step>
+  <Step title="Answers Recorded">
+    As the user answers questions, their responses are saved to the `data` field. For in-product surveys, answers are sent in real-time. For link surveys, answers are batched.
+  </Step>
+  <Step title="Response Completed or Abandoned">
+    - **Completed**: User reaches the end and submits (`finished: true`)
+    - **Partial**: User abandons mid-survey (`finished: false`)
+  </Step>
+  <Step title="Response Analyzed">
+    View in the dashboard, filter by attributes, export to CSV, or send to integrations via webhooks.
+  </Step>
+</Steps>
+
+## Response Data Structure
+
+Each response has the following structure:
+
+```json
+{
+  "id": "clx1234567890",
+  "createdAt": "2024-01-15T10:30:00Z",
+  "updatedAt": "2024-01-15T10:32:00Z",
+  "surveyId": "clxsurvey123",
+  "finished": true,
+  "contact": {
+    "id": "clxcontact456",
+    "userId": "user-123"
+  },
+  "contactAttributes": {
+    "email": "sarah@example.com",
+    "plan": "pro"
+  },
+  "data": {
+    "question1": "Very satisfied",
+    "question2": 9,
+    "question3": ["Feature A", "Feature B"]
+  },
+  "variables": {
+    "firstName": "Sarah",
+    "plan": "pro"
+  },
+  "meta": {
+    "url": "https://app.example.com/dashboard",
+    "userAgent": {
+      "browser": "Chrome",
+      "os": "macOS",
+      "device": "Desktop"
+    },
+    "country": "United States"
+  },
+  "tags": [
+    {"id": "tag1", "name": "Feature Request"},
+    {"id": "tag2", "name": "Priority: High"}
+  ],
+  "ttc": {
+    "question1": 5,
+    "question2": 3,
+    "question3": 8
+  },
+  "language": "en"
+}
+```
+
+### Key Fields Explained
+
+<AccordionGroup>
+  <Accordion title="data (Response Data)">
+    The actual answers to survey questions. Keys are question IDs, values are answers.
+    
+    **Value types:**
+    - **String**: Open text, single choice (`"Very satisfied"`)
+    - **Number**: Ratings, NPS (`9`)
+    - **Array**: Multiple choice (`["Option A", "Option B"]`)
+    - **Object**: Matrix questions (`{"row1": "col1", "row2": "col2"}`)
+    
+    **Example:**
+    ```json
+    {
+      "nps_score": 9,
+      "nps_reason": "Great product and support!",
+      "used_features": ["Analytics", "Integrations"]
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="meta (Metadata)">
+    Contextual information about where and how the response was collected.
+    
+    **Fields:**
+    - `url`: Page URL where survey was shown
+    - `source`: Survey source ("link", "app")
+    - `userAgent`: Browser, OS, device
+    - `country`: User's country (if IP geolocation enabled)
+    - `ipAddress`: User's IP (if capture enabled)
+    - `action`: Trigger action that showed the survey
+    
+    **Privacy note:** IP addresses are only captured if explicitly enabled in survey settings.
+  </Accordion>
+  
+  <Accordion title="variables (Custom Variables)">
+    Dynamic values you pass to personalize the survey. These are also saved with the response.
+    
+    **Use cases:**
+    - Personalization: `firstName`, `companyName`
+    - Context: `currentPlan`, `trialDaysLeft`
+    - Segmentation: `experimentVariant`, `featureFlags`
+    
+    **Example:**
+    ```typescript
+    formbricks.setContact({
+      userId: "user-123",
+      attributes: {
+        firstName: "Sarah",
+        plan: "pro"
+      }
+    });
+    ```
+    
+    Variables are available in response data for analysis.
+  </Accordion>
+  
+  <Accordion title="ttc (Time to Complete)">
+    Time spent on each question in seconds.
+    
+    **Example:**
+    ```json
+    {
+      "question1": 5,  // 5 seconds
+      "question2": 12, // 12 seconds
+      "question3": 3   // 3 seconds
+    }
+    ```
+    
+    **Use cases:**
+    - Identify confusing questions (high TTC)
+    - Optimize survey length
+    - Detect rushed responses (very low TTC)
+  </Accordion>
+  
+  <Accordion title="tags (Response Tags)">
+    Labels you apply to responses for organization.
+    
+    **Common tags:**
+    - "Feature Request"
+    - "Bug Report"
+    - "Priority: High"
+    - "Needs Follow-up"
+    - "Addressed"
+    
+    Apply tags manually in the dashboard or automatically via webhooks/API.
+  </Accordion>
+  
+  <Accordion title="contactAttributes (Snapshot)">
+    A snapshot of the contact's attributes **at the time of response**. Useful if attributes change later.
+    
+    **Example:** User was on "free" plan when they responded, but upgraded to "pro" later. `contactAttributes` preserves the original "free" value.
+  </Accordion>
+</AccordionGroup>
+
+## Completed vs. Partial Responses
+
+### Completed Responses (`finished: true`)
+
+User reached the end of the survey and clicked submit.
+
+**Characteristics:**
+- All questions answered (unless optional)
+- `finished: true`
+- Counted in completion rate
+- Included in response count by default
+
+### Partial Responses (`finished: false`)
+
+User started the survey but didn't complete it.
+
+**Reasons for partial responses:**
+- User closed the survey mid-way
+- Survey auto-closed (timeout)
+- User abandoned the tab/page
+- Technical error
+
+**Value of partial responses:**
+- Identify where users drop off
+- Understand question difficulty
+- Recover some data even if incomplete
+
+<Note>
+  **Tip:** Filter by `finished: false` to analyze drop-off patterns. If many users abandon at Question 3, it might be confusing or too intrusive.
+</Note>
+
+## Viewing Responses
+
+Navigate to a survey and click the **Responses** tab.
+
+### Summary View
+
+Aggregated view of all responses:
+
+- **Response count** and **completion rate**
+- **Question breakdown**: Charts and visualizations for each question
+- **Timeline**: Responses over time
+- **Response rate**: Displays vs. responses
+
+### Individual Responses
+
+Table view of individual responses:
+
+**Columns:**
+- Response ID
+- Contact (if identified)
+- Status (Completed/Partial)
+- Created date
+- Tags
+- Custom attributes
+
+**Click a response** to see:
+- Full answer details
+- Metadata (browser, location, etc.)
+- Time to complete per question
+- Contact profile (if linked)
+
+## Filtering Responses
+
+Filter responses to analyze specific segments:
+
+### Filter by Completion Status
+
+- **Completed only**: `finished: true`
+- **Partial only**: `finished: false`
+- **All responses**: No filter
+
+### Filter by Contact Attributes
+
+**Example:** Show only responses from Pro plan users
+
+```
+Attribute: plan
+Condition: equals
+Value: pro
+```
+
+### Filter by Response Data
+
+**Example:** Show only NPS detractors (score 0-6)
+
+```
+Question: NPS Score
+Condition: less than or equal to
+Value: 6
+```
+
+### Filter by Tags
+
+**Example:** Show only responses tagged "Feature Request"
+
+```
+Tag: Feature Request
+```
+
+### Filter by Date Range
+
+**Example:** Show responses from last 30 days
+
+```
+Date: Last 30 days
+```
+
+### Combine Filters
+
+All filters use AND logic:
+
+```
+Attribute: plan equals "free"
+AND
+Question: NPS Score <= 6
+AND
+Date: Last 7 days
+```
+
+**Result:** Recent detractors on the free plan—perfect for a churn prevention campaign.
+
+## Tagging Responses
+
+Tags help you organize and categorize responses.
+
+### Manual Tagging
+
+1. Click a response
+2. Click "Add Tag"
+3. Select existing tag or create new one
+4. Tag is applied immediately
+
+### Bulk Tagging
+
+1. Filter responses (e.g., NPS ≤ 6)
+2. Select multiple responses
+3. Click "Add Tag"
+4. Apply tag to all selected
+
+### Automated Tagging (via Webhooks)
+
+Use webhooks to auto-tag responses based on logic:
+
+**Example:** Tag all NPS detractors automatically
+
+```javascript
+// Your webhook endpoint
+if (response.data.nps_score <= 6) {
+  formbricksApi.addTag(response.id, "NPS Detractor");
+}
+```
+
+## Exporting Responses
+
+### CSV Export
+
+**Steps:**
+1. Go to Responses tab
+2. Apply filters (optional)
+3. Click "Export to CSV"
+4. Download file
+
+**CSV includes:**
+- All response data
+- Contact attributes
+- Metadata
+- Timestamps
+- Tags
+
+**Use cases:**
+- Import into Excel/Google Sheets
+- Analyze in BI tools (Tableau, Power BI)
+- Share with non-Formbricks users
+
+### API Export
+
+Fetch responses programmatically:
+
+```bash
+GET /api/v1/environments/{environmentId}/responses?surveyId={surveyId}
+```
+
+See [API Reference](/api-reference/responses) for details.
+
+### Webhook Integration
+
+Send responses to external tools in real-time:
+
+**Popular integrations:**
+- **Slack**: Notify team of new responses
+- **Notion**: Create database entries
+- **Zapier/Make/n8n**: Connect to 1000+ apps
+- **Your CRM**: Sync to Salesforce, HubSpot, etc.
+
+**Setup:**
+1. Go to Settings → Integrations
+2. Add webhook URL
+3. Choose trigger (response created, updated, finished)
+4. Formbricks sends response data to your endpoint
+
+## Response Metadata Deep Dive
+
+### User Agent Parsing
+
+Formbricks automatically parses user agents:
+
+**Detected fields:**
+- **Browser**: Chrome, Firefox, Safari, Edge, etc.
+- **OS**: Windows, macOS, Linux, iOS, Android
+- **Device**: Desktop, Mobile, Tablet
+
+**Use cases:**
+- Identify mobile-specific issues
+- Filter responses by device type
+- Understand browser compatibility
+
+### Geolocation
+
+If IP capture is enabled, Formbricks detects country:
+
+**Privacy note:** Formbricks does not store precise location (city/coordinates), only country-level data.
+
+**Use cases:**
+- Regional feedback analysis
+- Localization insights
+- Time zone considerations
+
+### Referrer & URL
+
+For in-product surveys, Formbricks captures:
+
+- **URL**: Page where survey was shown
+- **Referrer**: Previous page (if available)
+
+**Use cases:**
+- Understand context (e.g., survey shown on pricing page)
+- Identify high-value feedback sources
+- Track campaign effectiveness
+
+## Analytics & Insights
+
+### Response Rate
+
+Response rate = Responses / Displays
+
+**Example:** 50 responses from 500 displays = 10% response rate
+
+**Benchmarks:**
+- **Link surveys**: 5-15% typical
+- **In-product surveys**: 20-40% typical (much higher!)
+
+**Improve response rate:**
+- Add welcome card with context
+- Keep surveys short (less than 5 questions)
+- Show surveys at the right moment
+- Personalize with user's name
+- Offer incentives (if appropriate)
+
+### Completion Rate
+
+Completion rate = Completed responses / Total responses
+
+**Example:** 80 completed out of 100 started = 80% completion rate
+
+**Benchmarks:**
+- **Good**: &gt;70%
+- **Needs improvement**: &lt;50%
+
+**Improve completion rate:**
+- Remove unnecessary questions
+- Simplify question wording
+- Add progress indicator
+- Make optional questions truly optional
+- Test survey flow in development
+
+### Time to Complete (TTC)
+
+Average time users spend on the survey.
+
+**Benchmarks:**
+- **Ideal**: 1-3 minutes
+- **Acceptable**: 3-5 minutes
+- **Too long**: >5 minutes (expect drop-offs)
+
+**Per-question TTC:**
+
+Identify slow questions:
+- High TTC = confusing or requires thought
+- Very low TTC = skipped or skimmed
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Review Responses Regularly">
+    Set up Slack notifications or check the dashboard daily. Fresh feedback is most actionable.
+  </Accordion>
+  <Accordion title="Tag Responses for Follow-Up">
+    Tag high-value responses ("Interview Candidate", "Feature Request") and follow up within 48 hours.
+  </Accordion>
+  <Accordion title="Analyze Partial Responses">
+    Don't ignore abandons! They tell you where your survey loses people.
+  </Accordion>
+  <Accordion title="Segment by Contact Attributes">
+    Always analyze by segment (free vs. paid, new vs. tenured). Aggregated data can hide insights.
+  </Accordion>
+  <Accordion title="Export Regularly">
+    Back up response data monthly. Integrate with your data warehouse for long-term analysis.
+  </Accordion>
+  <Accordion title="Close the Loop">
+    Email users who gave valuable feedback. Thank them and share how you're using their input.
+  </Accordion>
+  <Accordion title="Respect Privacy">
+    Only capture IP/location if necessary. Follow GDPR and give users control over their data.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Surveys" icon="clipboard-question" href="/concepts/surveys">
+    Learn how to create surveys that collect valuable responses
+  </Card>
+  <Card title="Contacts" icon="users" href="/concepts/contacts">
+    Understand how responses are linked to contacts
+  </Card>
+  <Card title="Integrations" icon="plug" href="/integrations">
+    Send responses to Slack, Notion, your CRM, and more
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/responses">
+    Fetch and analyze responses programmatically
+  </Card>
+</CardGroup>

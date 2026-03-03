@@ -1,0 +1,92 @@
+---
+title: Third-party Integrations
+description: Connect Formbricks with your favorite tools to automate workflows and sync survey data.
+---
+
+Formbricks integrations allow you to automatically sync survey responses to your preferred tools and platforms. Whether you need to send responses to communication channels, databases, spreadsheets, or workflow automation tools, Formbricks has you covered.
+
+## Available Integrations
+
+### Communication & Collaboration
+
+<Card title="Slack" icon="slack" href="/integrations/slack">
+  Send survey responses to Slack channels in real-time
+</Card>
+
+### Data Storage & Management
+
+<CardGroup cols={2}>
+  <Card title="Notion" icon="table" href="/integrations/notion">
+    Sync responses to Notion databases
+  </Card>
+  
+  <Card title="Google Sheets" icon="google" href="/integrations/google-sheets">
+    Automatically populate Google Sheets with response data
+  </Card>
+</CardGroup>
+
+### Workflow Automation
+
+<Card title="Zapier" icon="bolt" href="/integrations/zapier">
+  Connect to 5000+ apps through Zapier
+</Card>
+
+## Integration Types
+
+Formbricks supports two types of integrations:
+
+### Direct Integrations
+
+Direct integrations (Slack, Notion, Google Sheets) use OAuth authentication and allow you to:
+- Connect with a few clicks
+- Select specific surveys to sync
+- Map survey questions to destination fields
+- Automatically send responses as they arrive
+
+### Webhook-based Integrations
+
+Webhook and API-based integrations (Zapier) provide:
+- Flexible trigger configurations
+- Custom data transformations
+- Support for complex workflows
+- Integration with thousands of apps
+
+## Getting Started
+
+<Steps>
+  <Step title="Navigate to Integrations">
+    In your Formbricks dashboard, go to **Configuration** > **Integrations**
+  </Step>
+  
+  <Step title="Choose Your Integration">
+    Click **Connect** on the integration you want to set up
+  </Step>
+  
+  <Step title="Authenticate">
+    Follow the OAuth flow to grant Formbricks access to your account
+  </Step>
+  
+  <Step title="Configure Sync">
+    Select which surveys and questions to sync, then map them to your destination
+  </Step>
+</Steps>
+
+## Self-Hosted Configuration
+
+<Note>
+  If you're running a self-hosted Formbricks instance, each integration requires additional environment variable configuration. Check the individual integration guides for setup instructions.
+</Note>
+
+## What Data Gets Synced?
+
+Depending on the integration, the following data can be synced:
+
+- **Response data**: Answers to survey questions
+- **Metadata**: Timestamp, user agent, country, device type
+- **Contact attributes**: User identification data (if configured)
+- **Survey information**: Survey name, type, and status
+- **Custom variables**: Any variables you've set in your survey logic
+
+## Need Help?
+
+If you encounter any issues or need assistance setting up integrations, reach out to us on [GitHub Discussions](https://github.com/formbricks/formbricks/discussions).

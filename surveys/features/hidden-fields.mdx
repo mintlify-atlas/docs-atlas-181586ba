@@ -1,0 +1,435 @@
+---
+title: Hidden Fields
+description: Pass hidden data through URL parameters to personalize surveys and track additional context
+icon: eye-off
+---
+
+Hidden fields allow you to pass data to your surveys through URL parameters without displaying them to respondents. This is useful for tracking user segments, personalizing questions, and enriching response data.
+
+## How Hidden Fields Work
+
+Hidden fields are:
+1. **Defined** in the survey configuration
+2. **Passed** via URL parameters when launching the survey
+3. **Stored** with survey responses
+4. **Available** for use in conditional logic and recall
+5. **Not visible** to survey respondents
+
+## Enabling Hidden Fields
+
+<Steps>
+  <Step title="Open Survey Settings">
+    Navigate to your survey in the editor and look for the "Hidden Fields" card (marked with an eye-off icon).
+  </Step>
+  
+  <Step title="Add Field IDs">
+    Enter field identifiers (e.g., `userId`, `plan`, `source`) that you want to capture.
+  </Step>
+  
+  <Step title="Use in Survey URL">
+    Append hidden fields to your survey URL as query parameters.
+  </Step>
+</Steps>
+
+## Configuration
+
+Hidden fields are configured in the survey object:
+
+```typescript
+{
+  "hiddenFields": {
+    "enabled": true,
+    "fieldIds": ["userId", "email", "plan", "source", "campaign"]
+  }
+}
+```
+
+Reference: `packages/database/zod/surveys.ts:109-116`
+
+## Passing Hidden Fields via URL
+
+When launching a survey, append hidden fields as URL parameters:
+
+```
+https://app.formbricks.com/s/survey123?
+  userId=user_abc123&
+  email=user@example.com&
+  plan=premium&
+  source=email&
+  campaign=spring_2024
+```
+
+### URL Encoding
+
+Always URL-encode values containing special characters:
+
+```javascript
+const hiddenFields = {
+  userId: 'user_123',
+  email: 'user@example.com',
+  tags: 'VIP Customer, Enterprise'
+};
+
+const params = new URLSearchParams(hiddenFields);
+const surveyUrl = `https://app.formbricks.com/s/survey123?${params.toString()}`;
+// Result: ?userId=user_123&email=user%40example.com&tags=VIP+Customer%2C+Enterprise
+```
+
+## Using Hidden Fields
+
+### In Conditional Logic
+
+Branch survey flow based on hidden field values:
+
+```json
+{
+  "logic": [
+    {
+      "id": "logic_1",
+      "conditions": {
+        "id": "cond_1",
+        "connector": "and",
+        "conditions": [
+          {
+            "id": "cond_1_1",
+            "leftOperand": {
+              "type": "hiddenField",
+              "value": "plan"
+            },
+            "operator": "equals",
+            "rightOperand": {
+              "type": "static",
+              "value": "enterprise"
+            }
+          }
+        ]
+      },
+      "actions": [
+        {
+          "id": "action_1",
+          "objective": "jumpToBlock",
+          "target": "enterprise_questions"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Reference: Logic type definitions at `packages/types/surveys/logic.ts:77-80`
+
+### In Question Text (Recall)
+
+Personalize questions using hidden field values:
+
+```json
+{
+  "id": "welcome",
+  "type": "openText",
+  "headline": {
+    "default": "Hi recall:userId, how can we improve your recall:plan experience?"
+  }
+}
+```
+
+The recall syntax `recall:fieldId` will be replaced with the actual value:
+```
+"Hi john_doe, how can we improve your premium experience?"
+```
+
+### In Response Data
+
+Hidden fields are automatically included in response data:
+
+```json
+{
+  "responseId": "resp_123",
+  "surveyId": "survey_123",
+  "data": {
+    "question_1": "Great product!",
+    "question_2": 5
+  },
+  "meta": {
+    "userId": "user_abc123",
+    "email": "user@example.com",
+    "plan": "premium",
+    "source": "email",
+    "campaign": "spring_2024"
+  }
+}
+```
+
+## Configuration Examples
+
+### Example 1: User Tracking
+
+```json
+{
+  "hiddenFields": {
+    "enabled": true,
+    "fieldIds": [
+      "userId",
+      "email",
+      "accountId",
+      "organizationId"
+    ]
+  }
+}
+```
+
+**Survey URL:**
+```
+https://app.formbricks.com/s/abc123?
+  userId=usr_789&
+  email=sarah@company.com&
+  accountId=acc_456&
+  organizationId=org_123
+```
+
+### Example 2: Marketing Attribution
+
+```json
+{
+  "hiddenFields": {
+    "enabled": true,
+    "fieldIds": [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "referrer"
+    ]
+  }
+}
+```
+
+**Survey URL:**
+```
+https://app.formbricks.com/s/abc123?
+  utm_source=google&
+  utm_medium=cpc&
+  utm_campaign=summer_sale&
+  utm_content=ad_variant_a&
+  utm_term=survey+software&
+  referrer=google.com
+```
+
+### Example 3: Product Context
+
+```json
+{
+  "hiddenFields": {
+    "enabled": true,
+    "fieldIds": [
+      "productId",
+      "productName",
+      "category",
+      "price",
+      "inStock"
+    ]
+  }
+}
+```
+
+**Survey URL:**
+```
+https://app.formbricks.com/s/abc123?
+  productId=prod_9876&
+  productName=Premium%20Subscription&
+  category=SaaS&
+  price=99&
+  inStock=true
+```
+
+### Example 4: User Segmentation
+
+```json
+{
+  "hiddenFields": {
+    "enabled": true,
+    "fieldIds": [
+      "userType",
+      "plan",
+      "signupDate",
+      "lastActiveDate",
+      "totalPurchases"
+    ]
+  }
+}
+```
+
+**Survey URL with Logic:**
+```
+https://app.formbricks.com/s/abc123?
+  userType=power_user&
+  plan=enterprise&
+  signupDate=2023-01-15&
+  lastActiveDate=2024-03-01&
+  totalPurchases=42
+```
+
+## Dynamic URL Generation
+
+### JavaScript Example
+
+```javascript
+function generateSurveyUrl(baseUrl, hiddenFields) {
+  const params = new URLSearchParams();
+  
+  Object.entries(hiddenFields).forEach(([key, value]) => {
+    if (value !== null && value !== undefined) {
+      params.append(key, String(value));
+    }
+  });
+  
+  return `${baseUrl}?${params.toString()}`;
+}
+
+// Usage
+const surveyUrl = generateSurveyUrl(
+  'https://app.formbricks.com/s/abc123',
+  {
+    userId: currentUser.id,
+    email: currentUser.email,
+    plan: currentUser.subscription.plan,
+    source: 'dashboard'
+  }
+);
+
+window.open(surveyUrl, '_blank');
+```
+
+### React Example
+
+```jsx
+import { useMemo } from 'react';
+
+function SurveyButton({ user, source }) {
+  const surveyUrl = useMemo(() => {
+    const params = new URLSearchParams({
+      userId: user.id,
+      email: user.email,
+      plan: user.plan,
+      source: source,
+      timestamp: Date.now()
+    });
+    
+    return `https://app.formbricks.com/s/abc123?${params.toString()}`;
+  }, [user, source]);
+  
+  return (
+    <a href={surveyUrl} target="_blank" rel="noopener noreferrer">
+      Take Survey
+    </a>
+  );
+}
+```
+
+### Python Example (Backend)
+
+```python
+from urllib.parse import urlencode
+
+def generate_survey_url(base_url, user_data):
+    hidden_fields = {
+        'userId': user_data.get('id'),
+        'email': user_data.get('email'),
+        'plan': user_data.get('subscription', {}).get('plan'),
+        'source': 'email_campaign',
+        'timestamp': str(int(time.time()))
+    }
+    
+    # Remove None values
+    hidden_fields = {k: v for k, v in hidden_fields.items() if v is not None}
+    
+    query_string = urlencode(hidden_fields)
+    return f"{base_url}?{query_string}"
+
+# Usage
+survey_url = generate_survey_url(
+    'https://app.formbricks.com/s/abc123',
+    current_user
+)
+```
+
+## Validation & Constraints
+
+Hidden field IDs must follow these rules (from `packages/types/surveys/validation.ts`):
+
+- Alphanumeric characters, hyphens, and underscores only
+- Cannot start with a number
+- Maximum length varies by implementation
+- Case-sensitive
+
+Valid examples:
+- `userId` ✓
+- `user_id` ✓
+- `user-id` ✓
+- `user123` ✓
+
+Invalid examples:
+- `123user` ✗ (starts with number)
+- `user id` ✗ (contains space)
+- `user@id` ✗ (contains special character)
+
+## Practical Use Cases
+
+### Customer Support Surveys
+- Pass ticket ID, support agent, and issue category
+- Pre-fill customer information
+- Track survey source (email, in-app, SMS)
+
+### Product Feedback
+- Include feature name, version, and user role
+- Track which page/section triggered the survey
+- Segment by usage frequency or feature adoption
+
+### E-commerce
+- Pass product ID, category, and price
+- Include order number and purchase date
+- Track campaign attribution
+
+### SaaS Onboarding
+- Pass signup source and referrer
+- Include plan type and company size
+- Track onboarding step completion
+
+## Best Practices
+
+<Tip>
+  **Consistent Naming**: Use consistent field names across all surveys (e.g., always `userId`, not sometimes `user_id`).
+</Tip>
+
+<Warning>
+  **No Sensitive Data**: Don't pass passwords, tokens, or highly sensitive PII in URL parameters.
+</Warning>
+
+- **Plan Field Names**: Define a standard set of hidden fields for your organization
+- **URL Length Limits**: Keep total URL under 2000 characters for browser compatibility
+- **Validate Values**: Sanitize and validate hidden field values on the backend
+- **Document Fields**: Maintain documentation of what each hidden field represents
+- **Privacy Compliance**: Ensure hidden fields comply with GDPR, CCPA, and other regulations
+- **Test Encoding**: Always test with special characters and international text
+
+## Preventing Deletion
+
+Hidden fields cannot be deleted if they are:
+- Used in conditional logic (error shown at `apps/web/modules/survey/editor/components/hidden-fields-card.tsx:81-94`)
+- Referenced in recall syntax (error at lines 96-119)
+- Used in quotas (error at lines 121-131)
+- Used in follow-up actions (error at lines 133-142)
+
+## Implementation Reference
+
+Hidden fields implementation:
+- UI component: `apps/web/modules/survey/editor/components/hidden-fields-card.tsx:29`
+- Type definitions: `packages/database/zod/surveys.ts:109-116`
+- Validation utilities: `packages/types/surveys/validation.ts`
+- Usage detection: `apps/web/modules/survey/editor/lib/utils`
+
+## Related Features
+
+- [Conditional Logic](/surveys/features/conditional-logic) - Use hidden fields in branching logic
+- [Webhooks](/surveys/features/webhooks) - Hidden fields included in webhook payloads
+- [Multi-Language](/surveys/features/multi-language) - Combine with language detection

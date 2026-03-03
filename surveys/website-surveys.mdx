@@ -1,0 +1,555 @@
+---
+title: 'Website Surveys'
+description: 'Embed surveys on your website with the Formbricks SDK'
+icon: 'browser'
+---
+
+Website surveys are embedded directly on your website using the Formbricks JavaScript SDK. They can be triggered by user actions, page views, or custom events without requiring page navigation.
+
+## How Website Surveys Work
+
+Website surveys use the `@formbricks/js-core` package to:
+
+1. Initialize connection to your Formbricks environment
+2. Track user actions and page views
+3. Display surveys based on triggers and conditions
+4. Submit responses without page reload
+
+```typescript
+// Website surveys require type: "app"
+interface TSurvey {
+  type: "app" | "link";
+  displayOption: "displayOnce" | "displayMultiple" | "respondMultiple" | "displaySome";
+  triggers: Array<{ actionClass: TActionClass }>;
+}
+```
+
+## Installation
+
+<Steps>
+  <Step title="Install the SDK">
+    <CodeGroup>
+    
+    ```bash npm
+    npm install @formbricks/js-core
+    ```
+    
+    ```bash yarn
+    yarn add @formbricks/js-core
+    ```
+    
+    ```bash pnpm
+    pnpm add @formbricks/js-core
+    ```
+    
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Initialize Formbricks">
+    Add the initialization code to your app's entry point:
+    
+    ```typescript
+    import formbricks from "@formbricks/js-core";
+    
+    formbricks.setup({
+      environmentId: "your-environment-id",
+      appUrl: "https://your-formbricks-instance.com"
+    });
+    ```
+  </Step>
+  
+  <Step title="Create an app survey">
+    In Formbricks, create a new survey and ensure the type is set to **App**.
+  </Step>
+  
+  <Step title="Configure triggers">
+    Set up when and how the survey should appear (see Triggers section below).
+  </Step>
+</Steps>
+
+## Framework Integration
+
+### HTML / JavaScript
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Website</title>
+</head>
+<body>
+  <h1>Welcome</h1>
+  
+  <script type="module">
+    import formbricks from "https://unpkg.com/@formbricks/js-core@latest";
+    
+    formbricks.setup({
+      environmentId: "your-environment-id",
+      appUrl: "https://your-formbricks-instance.com"
+    });
+  </script>
+</body>
+</html>
+```
+
+### React
+
+```tsx
+import { useEffect } from 'react';
+import formbricks from '@formbricks/js-core';
+
+function App() {
+  useEffect(() => {
+    formbricks.setup({
+      environmentId: process.env.REACT_APP_FORMBRICKS_ENV_ID,
+      appUrl: process.env.REACT_APP_FORMBRICKS_URL
+    });
+  }, []);
+  
+  return (
+    <div className="App">
+      <h1>My App</h1>
+    </div>
+  );
+}
+
+export default App;
+```
+
+### Next.js
+
+<CodeGroup>
+
+```tsx app/layout.tsx
+import { FormbricksProvider } from '@/components/formbricks-provider';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <FormbricksProvider>
+          {children}
+        </FormbricksProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+```tsx components/formbricks-provider.tsx
+'use client';
+
+import { useEffect } from 'react';
+import formbricks from '@formbricks/js-core';
+
+export function FormbricksProvider({ children }) {
+  useEffect(() => {
+    formbricks.setup({
+      environmentId: process.env.NEXT_PUBLIC_FORMBRICKS_ENV_ID!,
+      appUrl: process.env.NEXT_PUBLIC_FORMBRICKS_URL!
+    });
+  }, []);
+  
+  return <>{children}</>;
+}
+```
+
+</CodeGroup>
+
+### Vue.js
+
+```vue
+<template>
+  <div id="app">
+    <h1>My Vue App</h1>
+  </div>
+</template>
+
+<script>
+import formbricks from '@formbricks/js-core';
+
+export default {
+  name: 'App',
+  mounted() {
+    formbricks.setup({
+      environmentId: import.meta.env.VITE_FORMBRICKS_ENV_ID,
+      appUrl: import.meta.env.VITE_FORMBRICKS_URL
+    });
+  }
+}
+</script>
+```
+
+## Survey Triggers
+
+Website surveys can be triggered by various user actions:
+
+### No-Code Triggers
+
+Configure these triggers directly in the Formbricks UI without writing code.
+
+<Tabs>
+  <Tab title="Page View">
+    Trigger surveys when users visit specific pages.
+    
+    ```typescript
+    {
+      type: "noCode",
+      noCodeConfig: {
+        type: "pageView",
+        urlMatch: "contains",
+        url: "/pricing"
+      }
+    }
+    ```
+    
+    **URL match options:**
+    - `exactMatch` - Exact URL match
+    - `contains` - URL contains string
+    - `startsWith` - URL starts with string
+    - `endsWith` - URL ends with string
+    - `notMatch` - URL doesn't match
+    - `notContains` - URL doesn't contain string
+  </Tab>
+  
+  <Tab title="Click">
+    Trigger when users click specific elements.
+    
+    ```typescript
+    {
+      type: "noCode",
+      noCodeConfig: {
+        type: "click",
+        elementSelector: ".cta-button"
+      }
+    }
+    ```
+    
+    Supports CSS selectors like:
+    - `.class-name`
+    - `#element-id`
+    - `button[data-action="signup"]`
+  </Tab>
+  
+  <Tab title="Exit Intent">
+    Show surveys when users are about to leave.
+    
+    ```typescript
+    {
+      type: "noCode",
+      noCodeConfig: {
+        type: "exitIntent"
+      }
+    }
+    ```
+    
+    Detects when mouse moves toward browser close button.
+  </Tab>
+  
+  <Tab title="50% Scroll">
+    Trigger after users scroll halfway down the page.
+    
+    ```typescript
+    {
+      type: "noCode",
+      noCodeConfig: {
+        type: "fiftyPercentScroll"
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Code Triggers
+
+Trigger surveys programmatically from your application code.
+
+```typescript
+// Track custom action
+await formbricks.track("completed-checkout");
+
+// Track with properties (hidden fields)
+await formbricks.track("completed-checkout", {
+  orderValue: "299",
+  productCategory: "electronics"
+});
+```
+
+Create matching action in Formbricks UI with identifier `completed-checkout`.
+
+## Display Options
+
+Control how often surveys appear to users:
+
+```typescript
+type TSurveyDisplayOption = 
+  | "displayOnce"      // Show once per user
+  | "displayMultiple"  // Show until submitted
+  | "respondMultiple"  // Show every time conditions match
+  | "displaySome";     // Show N times
+```
+
+### Display Once
+
+Show survey only once per user, whether they respond or not.
+
+```typescript
+const survey = {
+  displayOption: "displayOnce"
+};
+```
+
+### Display Multiple
+
+Keep showing until user submits a response.
+
+```typescript
+const survey = {
+  displayOption: "displayMultiple"
+};
+```
+
+### Display Some
+
+Show survey a specific number of times.
+
+```typescript
+const survey = {
+  displayOption: "displaySome",
+  displayLimit: 3 // Show max 3 times
+};
+```
+
+### Respond Multiple
+
+Allow users to respond multiple times.
+
+```typescript
+const survey = {
+  displayOption: "respondMultiple"
+};
+```
+
+## Display Criteria
+
+### Recontact Days
+
+Set minimum time between survey displays:
+
+```typescript
+const survey = {
+  recontactDays: 7 // Wait 7 days before showing again
+};
+```
+
+### Display Percentage
+
+Show surveys to a percentage of qualifying users:
+
+```typescript
+const survey = {
+  displayPercentage: 50 // Show to 50% of users
+};
+```
+
+### Audience Targeting
+
+Target specific user segments:
+
+```typescript
+const survey = {
+  segment: {
+    filters: [
+      {
+        connector: "and",
+        resource: { type: "attribute", id: "plan" },
+        qualifier: { operator: "equals" },
+        value: "pro"
+      }
+    ]
+  }
+};
+```
+
+## User Identification
+
+Identify users to track responses and enable advanced targeting:
+
+```typescript
+// Set user ID
+await formbricks.setUserId("user_12345");
+
+// Set user email
+await formbricks.setEmail("user@example.com");
+
+// Set custom attributes
+await formbricks.setAttributes({
+  plan: "pro",
+  role: "admin",
+  company: "Acme Inc"
+});
+```
+
+<Note>
+User data is stored locally and synced with your Formbricks instance for targeting and response tracking.
+</Note>
+
+## Page Change Tracking
+
+For single-page applications, manually register route changes:
+
+```typescript
+// React Router
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import formbricks from '@formbricks/js-core';
+
+function RouteChangeTracker() {
+  const location = useLocation();
+  
+  useEffect(() => {
+    formbricks.registerRouteChange();
+  }, [location]);
+  
+  return null;
+}
+```
+
+```typescript
+// Next.js App Router
+import { usePathname } from 'next/navigation';
+import { useEffect } from 'react';
+import formbricks from '@formbricks/js-core';
+
+export function RouteTracker() {
+  const pathname = usePathname();
+  
+  useEffect(() => {
+    formbricks.registerRouteChange();
+  }, [pathname]);
+  
+  return null;
+}
+```
+
+## Survey Display Modes
+
+Website surveys support two display modes:
+
+### Modal (Default)
+
+Survey appears as an overlay modal:
+
+```typescript
+const survey = {
+  styling: {
+    placement: "center",      // center, bottomRight, topRight
+    overlay: true,            // Show backdrop
+    clickOutside: false       // Close on backdrop click
+  }
+};
+```
+
+### Inline
+
+Embed survey directly in page content:
+
+```html
+<div id="formbricks-survey-container"></div>
+
+<script>
+  // Survey automatically renders in container when triggered
+</script>
+```
+
+## Styling Customization
+
+Customize survey appearance to match your brand:
+
+```typescript
+const survey = {
+  styling: {
+    brandColor: "#00C4B8",
+    questionColor: "#000000",
+    inputColor: "#ffffff",
+    inputBorderColor: "#e5e7eb",
+    cardBackgroundColor: "#ffffff",
+    highlightBorderColor: "#00C4B8",
+    roundness: 8,
+    cardBorderColor: "#e5e7eb"
+  }
+};
+```
+
+<Tip>
+Test styling changes in the survey editor preview before publishing.
+</Tip>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Initialize early" icon="bolt">
+    Call `formbricks.setup()` as early as possible in your app lifecycle to ensure surveys can trigger on first page load.
+  </Accordion>
+  
+  <Accordion title="Use meaningful action names" icon="tag">
+    Choose descriptive action identifiers like `viewed-pricing-page` instead of generic names like `action1`.
+  </Accordion>
+  
+  <Accordion title="Test thoroughly" icon="flask">
+    Use your development environment to test trigger conditions before deploying to production.
+  </Accordion>
+  
+  <Accordion title="Respect user experience" icon="heart">
+    Set appropriate `recontactDays` to avoid survey fatigue. 7-14 days is recommended for most use cases.
+  </Accordion>
+  
+  <Accordion title="Monitor performance" icon="gauge-high">
+    The SDK is lightweight (~15KB gzipped) but test performance impact on your site.
+  </Accordion>
+</AccordionGroup>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Survey not appearing" icon="circle-exclamation">
+    - Check browser console for errors
+    - Verify `environmentId` and `appUrl` are correct
+    - Ensure survey type is set to **App**
+    - Confirm trigger conditions are met
+    - Check if user has already seen survey (displayOption)
+    - Verify survey status is `inProgress`
+  </Accordion>
+  
+  <Accordion title="Actions not tracking" icon="bullseye">
+    - Verify action code matches exactly (case-sensitive)
+    - Check network tab for failed API calls
+    - Ensure `formbricks.setup()` completed before tracking
+  </Accordion>
+  
+  <Accordion title="Styling not applying" icon="palette">
+    - Clear browser cache
+    - Check for CSS conflicts with your site styles
+    - Verify styling object structure matches schema
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+<CardGroup cols={2}>
+  <Card title="App Surveys" icon="mobile" href="/surveys/app-surveys">
+    Implement surveys in mobile apps
+  </Card>
+  
+  <Card title="JavaScript SDK" icon="js" href="/integration/javascript">
+    Complete SDK reference
+  </Card>
+  
+  <Card title="Conditional Logic" icon="code-branch" href="/surveys/features/conditional-logic">
+    Create dynamic survey flows
+  </Card>
+  
+  <Card title="Custom Styling" icon="palette" href="/surveys/features/custom-styling">
+    Advanced styling options
+  </Card>
+</CardGroup>

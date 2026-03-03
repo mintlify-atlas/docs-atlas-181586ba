@@ -1,0 +1,703 @@
+---
+title: Kubernetes Deployment
+description: Deploy Formbricks on Kubernetes using Helm charts for production-grade infrastructure
+icon: dharmachakra
+---
+
+Deploy Formbricks on Kubernetes for enterprise-grade, scalable infrastructure with auto-scaling, high availability, and easy management.
+
+## Prerequisites
+
+- A Kubernetes cluster (1.27+)
+- `kubectl` configured to access your cluster
+- `helm` CLI installed (v3.0+)
+- Ingress controller (e.g., NGINX, Traefik, or AWS ALB)
+- Storage class for persistent volumes
+
+## Quick Start
+
+<Steps>
+  <Step title="Add Formbricks Helm Repository">
+    ```bash
+    helm repo add formbricks https://formbricks.github.io/helm-charts
+    helm repo update
+    ```
+
+    <Info>
+      The Helm charts are maintained in the Formbricks repository at `/charts/formbricks`.
+    </Info>
+  </Step>
+
+  <Step title="Create a Values File">
+    Create a `values.yaml` file with your configuration:
+
+    ```yaml values.yaml
+    formbricks:
+      # REQUIRED: Your Formbricks domain
+      webappUrl: "https://formbricks.example.com"
+
+    # Enable ingress for external access
+    ingress:
+      enabled: true
+      ingressClassName: nginx  # or 'alb', 'traefik', etc.
+      hosts:
+        - host: formbricks.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+              serviceName: formbricks
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+
+    # PostgreSQL with pgvector
+    postgresql:
+      enabled: true
+      auth:
+        username: formbricks
+        database: formbricks
+      primary:
+        persistence:
+          enabled: true
+          size: 20Gi
+
+    # Redis for caching
+    redis:
+      enabled: true
+      architecture: standalone
+      master:
+        persistence:
+          enabled: true
+          size: 5Gi
+
+    # Auto-scaling configuration
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 70
+
+    # Resource allocation
+    deployment:
+      resources:
+        requests:
+          memory: "1Gi"
+          cpu: "1"
+        limits:
+          memory: "2Gi"
+    ```
+  </Step>
+
+  <Step title="Create Secrets">
+    Generate required secrets:
+
+    ```bash
+    # Generate secrets
+    NEXTAUTH_SECRET=$(openssl rand -hex 32)
+    ENCRYPTION_KEY=$(openssl rand -hex 32)
+    CRON_SECRET=$(openssl rand -hex 32)
+    POSTGRES_PASSWORD=$(openssl rand -hex 32)
+    REDIS_PASSWORD=$(openssl rand -hex 32)
+
+    # Create Kubernetes secret
+    kubectl create secret generic formbricks-app-secrets \
+      --from-literal=NEXTAUTH_SECRET=$NEXTAUTH_SECRET \
+      --from-literal=ENCRYPTION_KEY=$ENCRYPTION_KEY \
+      --from-literal=CRON_SECRET=$CRON_SECRET \
+      --from-literal=POSTGRES_USER_PASSWORD=$POSTGRES_PASSWORD \
+      --from-literal=POSTGRES_ADMIN_PASSWORD=$POSTGRES_PASSWORD \
+      --from-literal=REDIS_PASSWORD=$REDIS_PASSWORD
+    ```
+
+    <Warning>
+      Store these secrets securely. You'll need them for disaster recovery.
+    </Warning>
+  </Step>
+
+  <Step title="Install the Helm Chart">
+    Deploy Formbricks to your cluster:
+
+    ```bash
+    helm install formbricks formbricks/formbricks \
+      -f values.yaml \
+      --namespace formbricks \
+      --create-namespace
+    ```
+  </Step>
+
+  <Step title="Verify Deployment">
+    Check that all pods are running:
+
+    ```bash
+    kubectl get pods -n formbricks
+    ```
+
+    Expected output:
+    ```
+    NAME                                    READY   STATUS    RESTARTS   AGE
+    formbricks-6d5f8c7b4d-abc12            1/1     Running   0          2m
+    formbricks-6d5f8c7b4d-def34            1/1     Running   0          2m
+    formbricks-postgresql-0                1/1     Running   0          2m
+    formbricks-redis-master-0              1/1     Running   0          2m
+    ```
+  </Step>
+
+  <Step title="Access Your Instance">
+    Get the ingress address:
+
+    ```bash
+    kubectl get ingress -n formbricks
+    ```
+
+    Navigate to your configured domain to complete the setup wizard.
+  </Step>
+</Steps>
+
+## Architecture Overview
+
+The Helm chart deploys the following components:
+
+```mermaid
+graph TD
+    A[Ingress] --> B[Formbricks Service]
+    B --> C1[Formbricks Pod 1]
+    B --> C2[Formbricks Pod 2]
+    B --> C3[Formbricks Pod N]
+    C1 --> D[PostgreSQL StatefulSet]
+    C2 --> D
+    C3 --> D
+    C1 --> E[Redis Master]
+    C2 --> E
+    C3 --> E
+    D --> F[PVC - PostgreSQL]
+    E --> G[PVC - Redis]
+    H[HPA] -.-> B
+```
+
+## Configuration Reference
+
+### Core Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|----------|
+| `formbricks.webappUrl` | Public URL of your instance (required) | `""` |
+| `formbricks.publicUrl` | Alternative public URL for surveys | Same as `webappUrl` |
+| `deployment.replicas` | Initial number of replicas | `1` |
+| `deployment.image.repository` | Container image | `ghcr.io/formbricks/formbricks` |
+| `deployment.image.tag` | Image tag | Chart appVersion |
+
+### Database Configuration
+
+<AccordionGroup>
+  <Accordion title="Built-in PostgreSQL">
+    Use the bundled PostgreSQL with pgvector:
+
+    ```yaml
+    postgresql:
+      enabled: true
+      image:
+        repository: pgvector/pgvector
+        tag: 0.8.0-pg17
+      auth:
+        username: formbricks
+        database: formbricks
+        existingSecret: formbricks-app-secrets
+        secretKeys:
+          adminPasswordKey: POSTGRES_ADMIN_PASSWORD
+          userPasswordKey: POSTGRES_USER_PASSWORD
+      primary:
+        persistence:
+          enabled: true
+          size: 20Gi
+          storageClass: ""  # Use default storage class
+    ```
+  </Accordion>
+
+  <Accordion title="External PostgreSQL">
+    Connect to an external PostgreSQL instance:
+
+    ```yaml
+    postgresql:
+      enabled: false
+      externalDatabaseUrl: "postgresql://user:pass@host:5432/formbricks?schema=public"
+    ```
+
+    Add the connection string to your secrets:
+
+    ```bash
+    kubectl create secret generic formbricks-app-secrets \
+      --from-literal=DATABASE_URL="postgresql://user:pass@host:5432/formbricks?schema=public" \
+      # ... other secrets
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Redis Configuration
+
+<AccordionGroup>
+  <Accordion title="Built-in Redis">
+    Use the bundled Redis/Valkey:
+
+    ```yaml
+    redis:
+      enabled: true
+      architecture: standalone
+      auth:
+        enabled: true
+        existingSecret: formbricks-app-secrets
+        existingSecretPasswordKey: REDIS_PASSWORD
+      master:
+        persistence:
+          enabled: true
+          size: 5Gi
+    ```
+  </Accordion>
+
+  <Accordion title="External Redis">
+    Connect to an external Redis instance:
+
+    ```yaml
+    redis:
+      enabled: false
+      externalRedisUrl: "redis://:password@host:6379"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Auto-Scaling Configuration
+
+The Horizontal Pod Autoscaler (HPA) automatically scales pods based on resource usage:
+
+```yaml
+autoscaling:
+  enabled: true
+  minReplicas: 2  # Minimum for high availability
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60  # Scale up at 60% CPU
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 60  # Scale up at 60% memory
+  
+  # Scale-down behavior (prevents flapping)
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Wait 5 minutes
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 120  # Remove 1 pod every 2 minutes
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60  # Add 2 pods every minute
+```
+
+### Pod Disruption Budget
+
+Ensure availability during cluster maintenance:
+
+```yaml
+pdb:
+  enabled: true
+  minAvailable: 1  # Always keep at least 1 pod running
+  # OR use maxUnavailable:
+  # maxUnavailable: 1
+```
+
+<Warning>
+  With `minAvailable: 1` and only 1 replica, the PDB will block node drains. Always run at least 2 replicas in production.
+</Warning>
+
+### Ingress Configuration
+
+<Tabs>
+  <Tab title="NGINX Ingress">
+    ```yaml
+    ingress:
+      enabled: true
+      ingressClassName: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+        nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+      hosts:
+        - host: formbricks.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+              serviceName: formbricks
+      tls:
+        - secretName: formbricks-tls
+          hosts:
+            - formbricks.example.com
+    ```
+  </Tab>
+
+  <Tab title="AWS ALB">
+    ```yaml
+    ingress:
+      enabled: true
+      ingressClassName: alb
+      annotations:
+        alb.ingress.kubernetes.io/scheme: internet-facing
+        alb.ingress.kubernetes.io/target-type: ip
+        alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:...
+        alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+        alb.ingress.kubernetes.io/ssl-redirect: '443'
+      hosts:
+        - host: formbricks.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+              serviceName: formbricks
+    ```
+  </Tab>
+
+  <Tab title="Traefik">
+    ```yaml
+    ingress:
+      enabled: true
+      ingressClassName: traefik
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-prod
+        traefik.ingress.kubernetes.io/router.entrypoints: websecure
+      hosts:
+        - host: formbricks.example.com
+          paths:
+            - path: /
+              pathType: Prefix
+              serviceName: formbricks
+    ```
+  </Tab>
+</Tabs>
+
+## Advanced Configuration
+
+### External Secrets Operator
+
+Use External Secrets Operator for AWS Secrets Manager, Azure Key Vault, or Google Secret Manager:
+
+```yaml
+externalSecret:
+  enabled: true
+  secretStore:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  refreshInterval: "1h"
+  files:
+    NEXTAUTH_SECRET:
+      key: formbricks/production
+      property: nextauth_secret
+    ENCRYPTION_KEY:
+      key: formbricks/production
+      property: encryption_key
+```
+
+### SMTP Configuration
+
+Enable email features by adding SMTP credentials to your secrets:
+
+```bash
+kubectl create secret generic formbricks-app-secrets \
+  --from-literal=MAIL_FROM="noreply@example.com" \
+  --from-literal=SMTP_HOST="smtp.gmail.com" \
+  --from-literal=SMTP_PORT="587" \
+  --from-literal=SMTP_USER="your-email@gmail.com" \
+  --from-literal=SMTP_PASSWORD="your-app-password" \
+  # ... other secrets
+```
+
+Update your values:
+
+```yaml
+deployment:
+  env:
+    EMAIL_VERIFICATION_DISABLED:
+      value: "0"
+    PASSWORD_RESET_DISABLED:
+      value: "0"
+    SMTP_SECURE_ENABLED:
+      value: "1"
+```
+
+### S3 File Storage
+
+Configure S3 for file uploads:
+
+```bash
+kubectl create secret generic formbricks-app-secrets \
+  --from-literal=S3_ACCESS_KEY="your-access-key" \
+  --from-literal=S3_SECRET_KEY="your-secret-key" \
+  --from-literal=S3_REGION="us-east-1" \
+  --from-literal=S3_BUCKET_NAME="formbricks-uploads" \
+  # ... other secrets
+```
+
+### Enterprise Features
+
+Enable Enterprise features with a license key:
+
+```yaml
+enterprise:
+  enabled: true
+  licenseKey: "your-enterprise-license-key"
+```
+
+### Monitoring with Prometheus
+
+The chart includes a ServiceMonitor for Prometheus Operator:
+
+```yaml
+serviceMonitor:
+  enabled: true
+  additionalLabels:
+    prometheus: kube-prometheus
+  endpoints:
+    - interval: 30s
+      path: /metrics
+      port: metrics
+```
+
+## Maintenance Operations
+
+### Upgrading Formbricks
+
+<Steps>
+  <Step title="Update Helm Repository">
+    ```bash
+    helm repo update formbricks
+    ```
+  </Step>
+
+  <Step title="Check for Changes">
+    ```bash
+    helm diff upgrade formbricks formbricks/formbricks \
+      -f values.yaml \
+      -n formbricks
+    ```
+  </Step>
+
+  <Step title="Upgrade Release">
+    ```bash
+    helm upgrade formbricks formbricks/formbricks \
+      -f values.yaml \
+      -n formbricks
+    ```
+
+    Database migrations run automatically via a pre-sync hook.
+  </Step>
+
+  <Step title="Monitor Rollout">
+    ```bash
+    kubectl rollout status deployment/formbricks -n formbricks
+    ```
+  </Step>
+</Steps>
+
+### Backup and Restore
+
+#### Backup PostgreSQL
+
+```bash
+# Create a backup
+kubectl exec -n formbricks formbricks-postgresql-0 -- \
+  pg_dump -U formbricks formbricks > formbricks-backup.sql
+```
+
+#### Restore PostgreSQL
+
+```bash
+# Restore from backup
+kubectl exec -i -n formbricks formbricks-postgresql-0 -- \
+  psql -U formbricks formbricks < formbricks-backup.sql
+```
+
+#### Automated Backups with Velero
+
+```bash
+# Install Velero
+velero install --provider aws --bucket formbricks-backups \
+  --secret-file ./credentials-velero
+
+# Create backup schedule
+velero schedule create formbricks-daily \
+  --schedule="0 2 * * *" \
+  --include-namespaces formbricks
+```
+
+### Scaling
+
+#### Manual Scaling
+
+```bash
+# Scale to specific replica count
+kubectl scale deployment formbricks -n formbricks --replicas=5
+```
+
+#### Adjust HPA Limits
+
+```bash
+# Update HPA
+kubectl patch hpa formbricks -n formbricks \
+  --patch '{"spec":{"maxReplicas":20}}'
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Pods not starting">
+    Check pod status and logs:
+
+    ```bash
+    kubectl describe pod -n formbricks -l app.kubernetes.io/name=formbricks
+    kubectl logs -n formbricks -l app.kubernetes.io/name=formbricks --tail=100
+    ```
+
+    Common issues:
+    - Missing secrets
+    - Database connection failures
+    - Insufficient resources
+  </Accordion>
+
+  <Accordion title="Database migration issues">
+    Check the migration job logs:
+
+    ```bash
+    kubectl logs -n formbricks -l job-name=formbricks-migration
+    ```
+
+    Manually run migrations if needed:
+
+    ```bash
+    kubectl exec -it -n formbricks deployment/formbricks -- \
+      pnpm --filter=web db:migrate:deploy
+    ```
+  </Accordion>
+
+  <Accordion title="Ingress not working">
+    Verify ingress configuration:
+
+    ```bash
+    kubectl describe ingress -n formbricks
+    kubectl get svc -n formbricks
+    ```
+
+    Check ingress controller logs:
+
+    ```bash
+    # For NGINX
+    kubectl logs -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx
+    ```
+  </Accordion>
+
+  <Accordion title="High memory usage">
+    Adjust resource limits:
+
+    ```yaml
+    deployment:
+      resources:
+        limits:
+          memory: "4Gi"
+        requests:
+          memory: "2Gi"
+    ```
+
+    Enable vertical pod autoscaling:
+
+    ```bash
+    kubectl apply -f - <<EOF
+    apiVersion: autoscaling.k8s.io/v1
+    kind: VerticalPodAutoscaler
+    metadata:
+      name: formbricks-vpa
+      namespace: formbricks
+    spec:
+      targetRef:
+        apiVersion: apps/v1
+        kind: Deployment
+        name: formbricks
+      updatePolicy:
+        updateMode: "Auto"
+    EOF
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Security Best Practices
+
+### Network Policies
+
+Restrict pod-to-pod communication:
+
+```yaml
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: formbricks-network-policy
+  namespace: formbricks
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: formbricks
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+```
+
+### Pod Security Standards
+
+The chart follows Pod Security Standards (restricted):
+
+```yaml
+deployment:
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    fsGroup: 1000
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Production Checklist" icon="clipboard-check" href="/self-hosting/production-checklist">
+    Ensure your deployment is production-ready
+  </Card>
+  <Card title="Monitoring Setup" icon="chart-line" href="/self-hosting/monitoring">
+    Set up observability and alerts
+  </Card>
+</CardGroup>
